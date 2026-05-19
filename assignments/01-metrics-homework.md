@@ -43,6 +43,7 @@ Your Miro board has four zones.
 - Process: stages a user goes through inside the feature.
 - Value: what good outcome looks like.
 - Quality and satisfaction signals.
+- What could break or get worse when this feature ships.
 
 ---
 
