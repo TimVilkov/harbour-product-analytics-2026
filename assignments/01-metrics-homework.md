@@ -133,11 +133,9 @@ In the presentation you can earn extra points by:
 
 | Component | Weight |
 |---|---|
-| Company metric tree (Zone 2) | 60% |
+| Context + company metric tree (Zones 1 and 2) | 60% |
 | Squad metric structure (Zone 3) | 20% |
 | Feature deep-dive (Zone 4) | 20% |
 | **Content total** | **100%** |
 | Presentation (incl. attack and defense) | up to +20% |
 | **Max grade** | **120%** |
-
-Zone 1 (Context) is a prerequisite. Without it, the rest reads out of context.
