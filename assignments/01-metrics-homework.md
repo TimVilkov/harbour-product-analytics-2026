@@ -1,8 +1,8 @@
 # Homework 1 — Metric Design
 
-**Deadline:** start of Session 04, 2026-05-21
-**Format:** group, 6 teams, top-down assignment
-**Submission:** Miro board link in Google Classroom
+- **Deadline:** start of Session 04, 2026-05-21
+- **Format:** group, 6 teams, top-down assignment
+- **Submission:** Miro board link in Google Classroom
 
 ---
 
