@@ -28,7 +28,7 @@ Your Miro board has four zones.
 
 - A metric tree for the product slice in your environment card.
 - **≥30 metrics.** No depth limit.
-- **One North Star metric** at the top. If you treat it as a constellation (NSM plus a business output), say so.
+- **One North Star metric** at the top. If you treat it as a constellation (NSM plus a business output), say so. Think about the caveats and the potential problems with the metric you pick.
 - **Bridge to revenue** at the end: how does growing the North Star eventually move money. The link can be indirect, but make it explicit.
 
 ### Zone 3 — Squad metric structure
@@ -60,7 +60,6 @@ Each team gets one product. Assigned in class.
 | Macro scope | Rides (rider side) |
 | Squad | Matching system — owns rider↔driver pairing, dispatch, ETA prediction, post-match cancellation |
 | Stakeholder | VP Engineering for Matching, Rider Product Director |
-| NSM prompt | Could your top metric hide users who use Uber a lot but get bad rides — long waits, repeated cancellations, surge denials? |
 
 **Feature: One-tap rematch after driver cancel.** When a driver cancels after being matched, the rider sees a one-tap banner offering an immediate rematch. A new search runs in the background; if a closer driver is found, the rider accepts without re-entering pickup or destination. The point is to stop riders from abandoning the app after a cancellation.
 
@@ -72,7 +71,6 @@ Each team gets one product. Assigned in class.
 | Macro scope | Restaurants vertical |
 | Squad | Courier dispatch & ETA quality — courier assignment, batching, ETA accuracy, late-delivery handling |
 | Stakeholder | VP Operations, Director of Logistics |
-| NSM prompt | Could your top metric mask cases where customers waited too long or got cold food? Where does a slow-but-completed delivery show up? |
 
 **Feature: Reject without penalty.** Couriers can decline an assigned order without affecting their acceptance rate, as long as they pick a structured reason: unsafe area, bad weather, route too far, vehicle issue. The order is returned to dispatch and re-assigned to another courier. Couriers used to take risky orders to avoid getting penalised; the feature lets them opt out honestly.
 
@@ -84,7 +82,6 @@ Each team gets one product. Assigned in class.
 | Macro scope | Investments tab (stocks, ETFs, crypto) |
 | Squad | Order execution & price quality — spread, slippage, fill rate, execution latency |
 | Stakeholder | Head of Trading, Compliance Lead |
-| NSM prompt | Could "trades executed" hide bad fill quality — users got their trade but at a worse price than expected? |
 
 **Feature: Price improvement alert at placement.** When a user places an order on a stock with an unusually wide spread, the app shows a one-screen alert: "Your fill is likely to be X% worse than the mid-price. You can wait, proceed, or cancel." If the user chooses to wait, the order is held until the spread normalises or until they manually proceed. The feature exists for retail traders who don't always know what a wide spread is costing them.
 
@@ -96,7 +93,6 @@ Each team gets one product. Assigned in class.
 | Macro scope | Marketplace (buyer and seller flows) |
 | Squad | Search & recommendations — search relevance, query understanding, homepage feed, category recs, related items |
 | Stakeholder | VP Discovery, Head of Buyer Experience |
-| NSM prompt | Could your top metric be inflated by buyers who search heavily but never buy? Or by trending items dominating recs while niche sellers get no visibility? |
 
 **Feature: Visual search.** A camera icon next to the search bar lets users upload a photo or take one on the spot. Etsy returns visually similar listings — a bag, a dress, a lamp, whatever was in the picture. The flow is: tap camera → upload or shoot → results page → tap a listing → buy. The feature is for buyers who can describe what they want visually but not in words.
 
@@ -108,7 +104,6 @@ Each team gets one product. Assigned in class.
 | Macro scope | Core app (tracking, social, Premium) |
 | Squad | Activation — first-week experience of new users: time to first activity, first social interaction, first habit signal |
 | Stakeholder | Director of Growth, Head of New User Experience |
-| NSM prompt | Could your top metric treat someone who logs one walk per month the same as a runner doing five activities a week? |
 
 **Feature: Beginner 7-day challenge.** During sign-up, new users are offered an opt-in challenge: log any kind of activity once a day for seven days in a row. Each day Strava sends a short nudge with a streak counter. On day 7 the user gets a digital badge and a one-tap share. The feature is designed to push new users into the habit loop before they decide whether the app is for them.
 
@@ -120,7 +115,6 @@ Each team gets one product. Assigned in class.
 | Macro scope | Main app (viewer side) |
 | Squad | Notification & re-engagement — push, email, dormant-user re-activation, homepage surfacing for returning visitors |
 | Stakeholder | Director of Growth, VP Viewer Experience |
-| NSM prompt | Could aggressive notifications inflate engagement while users actually get annoyed and churn longer-term? How does notification quality show up in your tree? |
 
 **Feature: Weekly digest of new uploads from subscribed channels.** Once a week, dormant users (no app open in 7+ days) get a push notification titled "New from channels you follow." Tapping it opens a digest page with the top 3 recent videos from their subscriptions. The flow is: notification → tap → digest page → tap a video → playback. The feature targets users who used to be active but stopped opening the app.
 
