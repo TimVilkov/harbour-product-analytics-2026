@@ -122,4 +122,21 @@ Each team gets one product. Assigned in class.
 
 ## Presentation
 
-15 minutes per team in Session 04.
+15 minutes per team in Session 04. Ideally most of the team speaks, not just one person.
+
+In the presentation you can earn extra points by:
+
+- **Attacking** another team's choices with a clear argument. Don't fear challenging.
+- **Defending** your own choices under pressure. Be ready to be challenged.
+
+---
+
+## Grading
+
+Weights apply to the Miro board:
+
+- **Zone 2 — Company metric tree:** 60%
+- **Zone 3 — Squad metric structure:** 20%
+- **Zone 4 — Feature deep-dive:** 20%
+
+Zone 1 (Context) is a prerequisite. Without it, the rest reads out of context.
