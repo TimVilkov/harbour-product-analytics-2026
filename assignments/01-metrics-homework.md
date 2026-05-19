@@ -24,7 +24,7 @@ Your Miro board has four zones.
 
 ### Zone 2 — Company metric tree
 
-- A metric tree for the product slice in your environment card.
+- A metric tree for the product slice in your environment card. The North Star metric and the tree are for that slice, not for the company as a whole (e.g., Uber Rides, not Uber including Eats and Freight).
 - **≥30 metrics.** No depth limit.
 - **One North Star metric** at the top. If you treat it as a constellation (NSM plus a business output), say so. Think about the caveats and the potential problems with the metric you pick.
 - **Bridge to revenue** at the end: how does growing the North Star eventually move money. The link can be indirect, but make it explicit.
