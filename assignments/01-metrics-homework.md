@@ -1,8 +1,6 @@
 # Homework 1 — Metric Design
 
-**Course:** Product Analytics, Harbour.Space 2026
-**Issued:** 2026-05-19 (Session 02)
-**Due:** Start of Session 04, 2026-05-21
+**Deadline:** start of Session 04, 2026-05-21
 **Format:** group, 6 teams, top-down assignment
 **Submission:** Miro board link in Google Classroom
 
@@ -133,10 +131,13 @@ In the presentation you can earn extra points by:
 
 ## Grading
 
-Weights apply to the Miro board:
-
-- **Zone 2 — Company metric tree:** 60%
-- **Zone 3 — Squad metric structure:** 20%
-- **Zone 4 — Feature deep-dive:** 20%
+| Component | Weight |
+|---|---|
+| Company metric tree (Zone 2) | 60% |
+| Squad metric structure (Zone 3) | 20% |
+| Feature deep-dive (Zone 4) | 20% |
+| **Content total** | **100%** |
+| Presentation (incl. attack and defense) | up to +20% |
+| **Max grade** | **120%** |
 
 Zone 1 (Context) is a prerequisite. Without it, the rest reads out of context.
