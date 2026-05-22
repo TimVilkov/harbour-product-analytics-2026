@@ -8,9 +8,8 @@
 
 You will run all queries in the same Snowflake account we used during Session 03.
 
-- **Account / login URL:** `<TODO — Tim to fill>`
-- **Username:** `<TODO — Tim to fill>`
-- **Password:** `<TODO — Tim to fill>`
+- **Account / login URL:** `<TODO — Tim to paste account URL>`
+- **Username and password:** posted in Google Classroom alongside this assignment.
 - **Role:** `STUDENT`
 - **Database:** `PA_COURSE`
 - **Schema:** `PUBLIC`
