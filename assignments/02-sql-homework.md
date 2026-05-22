@@ -10,17 +10,8 @@ You will run all queries in the same Snowflake account we used during Session 03
 
 - **Account / login URL:** [https://srjeltv-fi18270.snowflakecomputing.com](https://srjeltv-fi18270.snowflakecomputing.com)
 - **Username and password:** posted in Google Classroom alongside this assignment.
-- **Role:** `STUDENT`
-- **Warehouse:** `PA_COURSE_WH`
-- **Database:** `PA_COURSE`
-- **Schema:** `PUBLIC`
 
-Open a worksheet and run these two lines once per session so every query targets the right place:
-
-```sql
-USE DATABASE PA_COURSE;
-USE SCHEMA PUBLIC;
-```
+Database (`PA_COURSE`), schema (`PUBLIC`), role (`STUDENT`), and warehouse (`PA_COURSE_WH`) are pre-set on your account. After login, open a new worksheet — you can start writing `SELECT * FROM products` straight away.
 
 ---
 
