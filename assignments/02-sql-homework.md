@@ -4,6 +4,26 @@
 > **Total points:** 10
 > **Solo work.**
 
+## How to log in to Snowflake
+
+You will run all queries in the same Snowflake account we used during Session 03.
+
+- **Account / login URL:** `<TODO — Tim to fill>`
+- **Username:** `<TODO — Tim to fill>`
+- **Password:** `<TODO — Tim to fill>`
+- **Role:** `STUDENT`
+- **Database:** `PA_COURSE`
+- **Schema:** `PUBLIC`
+
+Open a worksheet and run these two lines once per session so every query targets the right place:
+
+```sql
+USE DATABASE PA_COURSE;
+USE SCHEMA PUBLIC;
+```
+
+---
+
 ## What this is
 
 A set of SQL tasks you solve in Snowflake on a small product dataset. Each task gives you a goal, the columns you must return, and a one-line call that checks your answer automatically. You get instant feedback. No screenshots, no manual grading.
