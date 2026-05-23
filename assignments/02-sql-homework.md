@@ -152,7 +152,7 @@ LIMIT 10;
 ...
 ```
 
-Send the `.sql` file in reply to the assignment thread on Slack by Monday, May 25, 23:59. Do not submit screenshots, query results, or links.
+Send the `.sql` file in Google Classroom by Monday, May 25, 23:59. Do not submit screenshots, query results, or links.
 
 ---
 
