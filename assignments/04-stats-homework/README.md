@@ -1,6 +1,6 @@
 # Homework 4 — Statistics
 
-First hands-on with statistics in Python. Six parts, roughly 3 hours of work.
+First hands-on with statistics in Python. Six parts.
 
 - **Deadline:** Monday, June 1, 2026, 23:59 (Barcelona time)
 - **Total points:** 10
