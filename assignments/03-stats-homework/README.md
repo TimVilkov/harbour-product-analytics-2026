@@ -34,16 +34,20 @@ The grader does not print the expected value. You iterate until everything passe
 
 Use whatever you prefer for visualisation — `matplotlib`, `seaborn`, `plotly`, anything else. The grader only checks numerics — plots are for your understanding and for me to read. Numerics via `numpy` and `scipy.stats`.
 
-## Parts
+## Parts and grading (10 points total)
 
-| Part | Topic |
-|---|---|
-| 1 | Generate and visualise distributions (discrete PMF, continuous PDF, empirical CDF) |
-| 2 | Descriptive stats and a CLT-based CI for revenue |
-| 3 | One-sample asymptotic Z-test against a baseline (with a brief primer on the t-distribution and SciPy) |
-| 4 | Two-sample test: asymptotic Z-test (numerically via `ttest_ind`) and permutation test |
-| 5 | Simulation: p-value distribution under $H_0$, power under $H_1$, what happens when assumptions break |
-| 6 | Bootstrap: CI for the mean (compare with Part 2), bonus CI for the median |
+| Part | Topic | Points |
+|---|---|---|
+| 1 | Generate and visualise distributions (discrete PMF, continuous PDF, empirical CDF) | 1.5 |
+| 2 | Descriptive stats and a CLT-based CI for revenue | 2.5 |
+| 3 | One-sample asymptotic Z-test against a baseline (with a brief primer on the t-distribution and SciPy) | 1.5 |
+| 4 | Two-sample test: asymptotic Z-test (numerically via `ttest_ind`) and permutation test | 1.5 |
+| 5 | Simulation: p-value distribution under $H_0$, power under $H_1$, what happens when assumptions break | 2.0 |
+| 6 | Bootstrap CI for the mean (compare with Part 2) and bonus bootstrap CI for the median | 1.0 |
+
+Within each part, points are split equally across the `check_answer` calls.
+
+Parts 1–3 cover the foundational material — descriptive statistics, the CLT-based CI, the one-sample test. Finish those cleanly and you have **5.5 points**. Add Part 4 (a one-line call to `ttest_ind` and a permutation loop) and you are at **7 points**. Part 5 is the heaviest because writing the H₀ / H₁ / broken-assumption simulations from scratch is what consolidates everything the course has built up to. Bootstrap (Part 6) rounds out the toolkit.
 
 ## How to submit
 
