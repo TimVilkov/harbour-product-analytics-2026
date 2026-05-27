@@ -26,8 +26,8 @@ _TOLERANCE = {
     "3_p_z": 3,
     "3_p_t": 3,
     "3_decision": 0,         # 0 = fail to reject, 1 = reject
-    "4_welch_t": 2,
-    "4_welch_p": 3,
+    "4_z_stat": 2,
+    "4_z_p": 3,
     "4_perm_p": 2,           # permutation p-value ±0.005 (varies with sim)
     "4_decision": 0,
     "5a_fpr": 2,             # empirical FPR ≈ 0.05 ± 0.01
@@ -58,8 +58,8 @@ _HASHES = {
     "3_p_z": "7f12dec224213ae8cff6abd272736c46c68f88f3f9f643229584a56790e5f34f",
     "3_p_t": "835930b69907857391c811107e71525c9623ae1675b0dce4f3626902bfc94537",
     "3_decision": "41468a123fa080049075483aafdfe340350b59f19e664b2b4abc5b5db66fc6ea",
-    "4_welch_t": "b695d7647e7d65e79b43002e5441a91315d035a32d504466644c6c1a6cae15e6",
-    "4_welch_p": "3e170f95c3d6b3b237c4dee4203e05ec1a75d9d1f3a692c03a1ca7b03d48669a",
+    "4_z_stat": "af866c4f9bca10a51896bd35285e147e11ef5d82fa6d409e78989e8317b1296a",
+    "4_z_p": "d340f7f2ec5c56e7a6379752f68d2646ce9c7a3bb0ae1bd54d0786b148928b14",
     "4_perm_p": "87bb15f28bcc40866e21178f41ac23ae8867cafefba6e3dade20824288e4bce4",
     "4_decision": "0cafbfe33592c7970cd4c660047745de45639a359ddc2ae9ec9854b35cce8d77",
     "5a_fpr": "78b2104b56c758a5740eeaa5d33067676ce3ed61ae48cdad78b2427c767f83b5",
