@@ -1,4 +1,4 @@
-# Homework 4 — Statistics
+# Homework 3 — Statistics
 
 First hands-on with statistics in Python. Six parts.
 
