@@ -36,7 +36,7 @@ _TOLERANCE = {
     "4_p_error": 2,
     "4_alpha_bonf": 4,
     "4_n_reject_raw": 0,
-    "4_n_reject_corr": 0,
+    "4_n_deterioration": 0,
     "4_ship": 0,
     # Part 4 — CUPED
     "4_cuped_rho": 2,
@@ -85,7 +85,7 @@ _HASHES = {
     "4_p_error": "5d50b663e218cbd13667699cadccb7a1f865bac1e29c58223299a06524c2eb34",
     "4_alpha_bonf": "4d4943a25f7dbbba42a5b45852bf67a5e1ce0262d7231a6a2a753c999fcda47c",
     "4_n_reject_raw": "5a01e1a38b40eae9014c692948a7f074eea6162cf24a48beb9b0d5f91d156d9f",
-    "4_n_reject_corr": "7c90d3fc85be48fc81c62dadd694b735f28a898817f5fb7b0f364d3143bf611b",
+    "4_n_deterioration": "24c46bbdeff0b002bc7933b7f3a57949dd92ff236b1fabf9008c76989aecc1d0",
     "4_ship": "fb74002fa26aecbfa875ded60c49405cfb0b28db79711502d3a7bd50f77a5c4d",
     "4_cuped_rho": "6afa627dd6c4114274858bfde5b664e93faa2337bd745053d3215473332acfe9",
     "4_cuped_var_ratio_theory": "2889d11183b7fa1316bc85e2ce400862ebe42b4424df3d85b92ae4bf8d6dfd8c",
