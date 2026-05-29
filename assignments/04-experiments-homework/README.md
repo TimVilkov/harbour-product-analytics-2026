@@ -3,7 +3,7 @@
 End-to-end analyst readout of an A/B experiment, framed as a product case. Six parts and a bonus.
 
 - **Deadline:** Tuesday, June 2, 2026, 23:59 (Barcelona time)
-- **Total points:** 10
+- **Total points:** 10 (+1 bonus)
 - **Solo work**
 - **Submission:** the completed `homework.ipynb` via Google Classroom
 
@@ -29,21 +29,19 @@ After each task you call `check_answer(task_id, your_value)`. It prints either `
 
 Use whatever you prefer for visualisation — `matplotlib`, `seaborn`, `plotly`. The grader only checks numerics. Numerics via `numpy`, `pandas`, and `scipy.stats`.
 
-## Parts and grading (10 points total)
+## Parts and grading (10 + 1 points)
 
 | Part | Topic | Points |
 |---|---|---|
-| 1 | Planning: MDE and weeks per metric (ARPU, ARPPU, usage, paying, latency, error). Uniform $\alpha = 0.05$, $\beta = 0.20$. | — |
-| 2 | Health: sample ratio mismatch ($\chi^2$). | — |
-| 3 | Analysis: one readout table over all 6 metrics + Bonferroni decision + 2–3 sentence interpretation. | — |
-| 4 | CUPED: variance reduction table on `usage_minutes` and `revenue` (with `usage_pre` as the covariate). | — |
-| Bonus | Delta-method CI for the relative lift on revenue. | — |
-| ★ 5 | Simulation: peeking inflates the FPR. | 1.0 |
-| ★ 6 | Simulation: power as a function of $n$. | 1.0 |
+| 1 | Planning: MDE and weeks per metric (ARPU, ARPPU, usage, paying, latency, error). Uniform $\alpha = 0.05$, $\beta = 0.20$. | 3 |
+| 2 | Health: sample ratio mismatch ($\chi^2$). | 1 |
+| 3 | Analysis: one readout table over all 6 metrics + Bonferroni decision + 2–3 sentence interpretation. | 3 |
+| 4 | CUPED: variance reduction table on `usage_minutes` and `revenue` (with `usage_pre` as the covariate). | 1 |
+| ★ 5 | Simulation: peeking inflates the FPR. | 1 |
+| ★ 6 | Simulation: power as a function of $n$. | 1 |
+| Bonus | Delta-method CI for the relative lift on revenue. | +1 |
 
-**Grading scheme.** The base **8 / 10** comes from completing **Parts 1–4 + Bonus** — the `check_answer` calls in those parts are self-checks for you, their PASS / FAIL does not enter the grade. The remaining **2 / 10** comes from the two ★ simulations, which are graded on PASS / FAIL.
-
-In practice: walk the analyst flow honestly (Parts 1–4 + Bonus) and you have 8 points. Add the two simulations and you have 10.
+**Grading scheme.** Parts 1–4 are graded on completion and the shape of your reasoning. The `check_answer` calls in those parts are self-checks for you; their PASS / FAIL does not enter the grade. Parts 5–6 and the bonus are graded on `check_answer` PASS / FAIL.
 
 ## How to submit
 
