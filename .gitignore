@@ -5,3 +5,8 @@
 __pycache__/
 *.pyc
 .ipynb_checkpoints/
+
+# Slidev build artifacts and deps
+node_modules/
+dist/
+slides/**/.slidev/

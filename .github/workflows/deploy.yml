@@ -1,0 +1,66 @@
+name: Deploy slides
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'slides/**'
+      - 'scripts/build-index.mjs'
+      - '.github/workflows/deploy.yml'
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 'lts/*'
+
+      - name: Build every deck in slides/
+        env:
+          BASE: /${{ github.event.repository.name }}
+        run: |
+          set -e
+          mkdir -p dist
+          for dir in slides/*/; do
+            name=$(basename "$dir")
+            [ -f "$dir/slides.md" ] || { echo "skip $name (no slides.md)"; continue; }
+            echo "=== building $name ==="
+            ( cd "$dir" && npm install --no-audit --no-fund && \
+              npx slidev build slides.md --base "$BASE/$name/" --out "$GITHUB_WORKSPACE/dist/$name" )
+          done
+
+      - name: Build course index page
+        run: node scripts/build-index.mjs
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+        with:
+          enablement: true
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
