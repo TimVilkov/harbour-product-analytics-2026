@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js" charset="utf-8"></script>
+<style>
+  html, body { margin: 0; padding: 0; font-family: 'Inter', system-ui, sans-serif; background: #FFFFFF; color: #1A1A1A; }
+  #plot { width: 100%; height: 100%; min-height: 200px; }
+</style>
+</head>
+<body>
+
+<div id="plot"></div>
+
+<script>
+function logGamma(z) {
+  const g = 7;
+  const c = [0.99999999999980993, 676.5203681218851, -1259.1392167224028,
+             771.32342877765313, -176.61502916214059, 12.507343278686905,
+             -0.13857109526572012, 9.9843695780195716e-6, 1.5056327351493116e-7];
+  if (z < 0.5) return Math.log(Math.PI / Math.sin(Math.PI * z)) - logGamma(1 - z);
+  z -= 1;
+  let x = c[0];
+  for (let i = 1; i < g + 2; i++) x += c[i] / (z + i);
+  const t = z + g + 0.5;
+  return 0.5 * Math.log(2 * Math.PI) + (z + 0.5) * Math.log(t) - t + Math.log(x);
+}
+function betaPdf(x, a, b) {
+  if (x <= 0 || x >= 1) return 0;
+  const logB = logGamma(a) + logGamma(b) - logGamma(a + b);
+  return Math.exp((a - 1) * Math.log(x) + (b - 1) * Math.log(1 - x) - logB);
+}
+function betaMedian(a, b) {
+  // numerical median via CDF inversion: bisection on integral
+  // simple approach: cumulative trapezoidal integration
+  const step = 0.001;
+  let cum = 0;
+  let prev = 0;
+  for (let x = step; x < 1; x += step) {
+    const f = betaPdf(x, a, b);
+    cum += (f + prev) * step / 2;
+    prev = f;
+    if (cum >= 0.5) return x;
+  }
+  return 0.5;
+}
+
+function makeCurve(a, b) {
+  const xs = [], ys = [];
+  for (let x = 0.005; x < 1; x += 0.005) { xs.push(x); ys.push(betaPdf(x, a, b)); }
+  return { xs, ys };
+}
+
+const dists = [
+  { a: 5, b: 2, label: 'left-skewed' },
+  { a: 4, b: 4, label: 'symmetric' },
+  { a: 2, b: 5, label: 'right-skewed' }
+];
+
+const traces = [];
+const annotations = [];
+const shapes = [];
+
+dists.forEach((d, idx) => {
+  const { xs, ys } = makeCurve(d.a, d.b);
+  const mean = d.a / (d.a + d.b);
+  const mode = (d.a - 1) / (d.a + d.b - 2);
+  const median = betaMedian(d.a, d.b);
+  const maxY = Math.max(...ys) * 1.05;
+
+  traces.push({
+    x: xs, y: ys,
+    type: 'scatter', mode: 'lines',
+    line: { color: '#1A1A1A', width: 2 },
+    xaxis: 'x' + (idx + 1),
+    yaxis: 'y' + (idx + 1),
+    hoverinfo: 'skip',
+    showlegend: false
+  });
+
+  // Vertical lines for mean (black), median (gray), mode (pink)
+  const xref = 'x' + (idx + 1);
+  const yref = 'y' + (idx + 1);
+  shapes.push(
+    { type: 'line', xref, yref, x0: mean,   x1: mean,   y0: 0, y1: maxY * 0.92, line: { color: '#1A1A1A', width: 1.4 } },
+    { type: 'line', xref, yref, x0: median, x1: median, y0: 0, y1: maxY * 0.92, line: { color: '#6B6B6B', width: 1.4, dash: 'dot' } },
+    { type: 'line', xref, yref, x0: mode,   x1: mode,   y0: 0, y1: maxY * 0.92, line: { color: '#FF00FF', width: 1.6 } }
+  );
+
+  const xRefPaper = 'paper';
+  const centerXPaper = 0.07 + idx * 0.32;
+  annotations.push({
+    x: centerXPaper, xref: 'paper', y: 1.06, yref: 'paper',
+    text: d.label,
+    showarrow: false,
+    font: { color: '#6B6B6B', size: 12, family: 'Inter' }
+  });
+});
+
+// Legend annotations at bottom of figure (paper coords)
+annotations.push(
+  { x: 0.15, xref: 'paper', y: -0.08, yref: 'paper', text: 'mean',   showarrow: false, font: { color: '#1A1A1A', size: 11, family: 'JetBrains Mono' } },
+  { x: 0.50, xref: 'paper', y: -0.08, yref: 'paper', text: 'median', showarrow: false, font: { color: '#6B6B6B', size: 11, family: 'JetBrains Mono' } },
+  { x: 0.85, xref: 'paper', y: -0.08, yref: 'paper', text: 'mode',   showarrow: false, font: { color: '#FF00FF', size: 11, family: 'JetBrains Mono' } }
+);
+
+Plotly.newPlot('plot', traces, {
+  grid: { rows: 1, columns: 3, pattern: 'independent' },
+  margin: { l: 30, r: 20, t: 36, b: 50 },
+  xaxis:  { domain: [0.00, 0.30], range: [0, 1], gridcolor: '#EEEEEE', zeroline: false, showticklabels: false },
+  yaxis:  { domain: [0.00, 0.95], showticklabels: false, gridcolor: '#EEEEEE', zeroline: false },
+  xaxis2: { domain: [0.35, 0.65], range: [0, 1], gridcolor: '#EEEEEE', zeroline: false, showticklabels: false },
+  yaxis2: { domain: [0.00, 0.95], showticklabels: false, gridcolor: '#EEEEEE', zeroline: false, anchor: 'x2' },
+  xaxis3: { domain: [0.70, 1.00], range: [0, 1], gridcolor: '#EEEEEE', zeroline: false, showticklabels: false },
+  yaxis3: { domain: [0.00, 0.95], showticklabels: false, gridcolor: '#EEEEEE', zeroline: false, anchor: 'x3' },
+  plot_bgcolor: '#FAFAFA',
+  paper_bgcolor: '#FFFFFF',
+  shapes,
+  annotations,
+  font: { family: 'Inter, system-ui, sans-serif', size: 11, color: '#1A1A1A' }
+}, { displayModeBar: false, responsive: true });
+</script>
+
+</body>
+</html>

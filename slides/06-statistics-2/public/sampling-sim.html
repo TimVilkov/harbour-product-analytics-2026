@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>Sampling distribution simulation</title>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]});"></script>
+<style>
+:root{--pink:#FF00FF;--ink:#1A1A1A;--muted:#6B6B6B;--bg:#FAFAFA}
+*{box-sizing:border-box}
+body{margin:0;font-family:'Inter',system-ui,-apple-system,sans-serif;color:var(--ink);background:#fff;padding:2rem 2.5rem;max-width:1100px;margin-inline:auto}
+h1{font-family:'Bricolage Grotesque','Inter',sans-serif;font-weight:800;font-size:2.2rem;letter-spacing:-0.02em;margin:0 0 0.4rem}
+p.lead{color:var(--muted);font-size:1rem;line-height:1.5;margin:0 0 1.2rem;max-width:48rem}
+.controls{display:flex;gap:1rem;align-items:center;flex-wrap:wrap;padding:0.8rem 1rem;background:var(--bg);border-left:3px solid var(--pink);margin-bottom:1rem;font-size:0.95rem}
+.controls label{font-family:'JetBrains Mono',monospace;font-size:0.85rem;color:var(--ink);text-transform:uppercase;letter-spacing:0.08em}
+.controls select,.controls button,.controls input{font-family:'Inter',sans-serif;font-size:0.95rem;padding:0.4rem 0.8rem;border:1.4px solid var(--ink);background:#fff;color:var(--ink);cursor:pointer}
+.controls button{background:var(--ink);color:#fff}
+.controls button:hover{background:var(--pink)}
+.controls button.secondary{background:#fff;color:var(--ink)}
+.controls button.secondary:hover{background:var(--bg);color:var(--ink);border-color:var(--pink)}
+.info{font-family:'JetBrains Mono',monospace;font-size:0.85rem;color:var(--muted);margin-left:auto}
+.chart-title{font-family:'JetBrains Mono',monospace;font-size:0.8rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;margin:1rem 0 0.2rem}
+.chart{width:100%;height:240px}
+.chart-tall{width:100%;height:340px}
+.computation{background:var(--bg);border-left:3px solid var(--ink);padding:0.7rem 1rem;margin-top:0.6rem;font-family:'JetBrains Mono',monospace;font-size:0.9rem;color:var(--ink);overflow-x:auto;white-space:nowrap}
+.computation .label{color:var(--muted);text-transform:uppercase;font-size:0.72rem;letter-spacing:0.1em;margin-right:0.6rem}
+.computation .meanval{color:var(--pink);font-weight:700}
+.pink{color:var(--pink);font-weight:700}
+.note{margin-top:1rem;color:var(--muted);font-size:0.85rem;line-height:1.55}
+</style>
+</head>
+<body>
+<h1>From sample to sampling distribution</h1>
+<p class="lead">Each draw produces a fresh sample of $n$ observations. We compute one statistic from each — here the sample mean $\bar X = \frac{1}{n}\sum X_i$ — and drop that one number into the histogram below. As we accumulate draws, the histogram fills out the <span class="pink">sampling distribution</span> of $\bar X$.</p>
+
+<div class="controls">
+  <label for="dist">source</label>
+  <select id="dist">
+    <option value="normal" selected>Normal(0, 1)</option>
+    <option value="uniform">Uniform(0, 1)</option>
+    <option value="exponential">Exponential(1)</option>
+    <option value="bernoulli">Bernoulli(0.3)</option>
+  </select>
+  <label for="n">n</label>
+  <select id="n">
+    <option>5</option>
+    <option selected>20</option>
+    <option>50</option>
+    <option>100</option>
+  </select>
+  <button id="one">Draw 1 sample</button>
+  <button id="hundred">Draw 100</button>
+  <button id="reset" class="secondary">Reset</button>
+  <span class="info">samples drawn: <span id="drawCount">0</span></span>
+</div>
+
+<div class="chart-title">one sample (current draw)</div>
+<div id="sample-chart" class="chart"></div>
+
+<div class="computation">
+  <span class="label">$\bar X = \frac{1}{n}\sum X_i$</span>
+  <span id="meanvalue" class="meanval">—</span>
+</div>
+
+<div class="chart-title">sampling distribution of $\bar X$ — fills out across many draws</div>
+<div id="sampling-chart" class="chart-tall"></div>
+
+<p class="note">Each black dot above is one observation from the source. The <span class="pink">pink</span> vertical mark is $\bar X$ for that sample. Each time you draw, that single number drops into the bottom histogram. Try the same source with different $n$ — bigger $n$ shrinks the spread of the sampling distribution.</p>
+
+<script>
+const dists = {
+  normal:      { sample: () => { const u=1-Math.random(),v=Math.random(); return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v); }, mu:0, sigma:1, range:[-4,4] },
+  uniform:     { sample: () => Math.random(), mu:0.5, sigma:Math.sqrt(1/12), range:[-0.2,1.2] },
+  exponential: { sample: () => -Math.log(1-Math.random()), mu:1, sigma:1, range:[0,6] },
+  bernoulli:   { sample: () => Math.random()<0.3?1:0, mu:0.3, sigma:Math.sqrt(0.21), range:[-0.3,1.3] }
+};
+
+let means = [];
+let lastSample = [];
+
+function drawSample() {
+  const distKey = document.getElementById('dist').value;
+  const n = parseInt(document.getElementById('n').value);
+  const { sample } = dists[distKey];
+  const xs = new Array(n);
+  let sum = 0;
+  for (let i=0; i<n; i++) { xs[i] = sample(); sum += xs[i]; }
+  const mean = sum / n;
+  return { xs, mean };
+}
+
+function renderSample({ xs, mean }) {
+  const distKey = document.getElementById('dist').value;
+  const { range } = dists[distKey];
+
+  // jitter for visibility
+  const jitter = xs.map(() => (Math.random()-0.5)*0.3);
+
+  const dotsTrace = {
+    x: xs, y: jitter, mode: 'markers', type: 'scatter',
+    marker: { size: 9, color: '#1A1A1A', opacity: 0.7 },
+    name: 'observations', hoverinfo: 'x'
+  };
+  const meanTrace = {
+    x: [mean, mean], y: [-0.6, 0.6], mode: 'lines', type: 'scatter',
+    line: { color: '#FF00FF', width: 3 }, name: 'X̄', hoverinfo: 'x'
+  };
+
+  Plotly.react('sample-chart', [dotsTrace, meanTrace], {
+    paper_bgcolor:'#fff', plot_bgcolor:'#FAFAFA',
+    margin: { l: 40, r: 20, t: 8, b: 35 },
+    xaxis: { range, gridcolor:'#EEE', zerolinecolor:'#CCC' },
+    yaxis: { range: [-0.7, 0.7], showticklabels: false, showgrid: false, zeroline: false },
+    font: { family:'Inter, sans-serif', color:'#1A1A1A' },
+    showlegend: true,
+    legend: { x: 1, y: 1.1, xanchor: 'right', orientation: 'h', bgcolor:'rgba(255,255,255,0.85)' }
+  }, { responsive: true, displaylogo: false });
+
+  // Update computation line
+  const preview = xs.slice(0, 6).map(v => v.toFixed(2)).join(' + ');
+  const tail = xs.length > 6 ? ' + ...' : '';
+  document.getElementById('meanvalue').innerHTML = `( ${preview}${tail} ) / ${xs.length}  =  <span style="color:#FF00FF">${mean.toFixed(3)}</span>`;
+}
+
+function renderSampling() {
+  const distKey = document.getElementById('dist').value;
+  const n = parseInt(document.getElementById('n').value);
+  const { mu, sigma } = dists[distKey];
+
+  // SE of the sample mean. Use this to pick a window and bin width that scale with n.
+  const se = sigma / Math.sqrt(n);
+  const halfWindow = Math.max(4 * se, 0.05);
+  const xRange = [mu - halfWindow, mu + halfWindow];
+  const binSize = (xRange[1] - xRange[0]) / 40;
+
+  const hist = {
+    x: means, type: 'histogram',
+    xbins: { start: xRange[0], end: xRange[1], size: binSize },
+    marker: { color: '#1A1A1A', line: { color:'#fff', width:0.5 } },
+    histnorm: 'probability density', name: 'X̄ values'
+  };
+  const muLegend = {
+    x: [mu], y: [null], mode: 'lines', type: 'scatter',
+    line: { color: '#FF00FF', width: 2, dash: 'dash' },
+    name: 'μ', hoverinfo: 'skip', showlegend: true
+  };
+
+  Plotly.react('sampling-chart', [hist, muLegend], {
+    paper_bgcolor:'#fff', plot_bgcolor:'#FAFAFA',
+    margin: { l: 50, r: 20, t: 8, b: 40 },
+    xaxis: { title: 'X̄', range: xRange, gridcolor:'#EEE', zerolinecolor:'#CCC' },
+    yaxis: { title: 'density', gridcolor:'#EEE', autorange: true },
+    font: { family:'Inter, sans-serif', color:'#1A1A1A' },
+    showlegend: true,
+    legend: { x: 1, y: 1, xanchor: 'right', bgcolor: 'rgba(255,255,255,0.85)' },
+    shapes: [{
+      type: 'line', x0: mu, x1: mu, y0: 0, y1: 1, yref: 'paper',
+      line: { color: '#FF00FF', width: 2, dash: 'dash' }
+    }]
+  }, { responsive: true, displaylogo: false });
+}
+
+function drawOne() {
+  const s = drawSample();
+  lastSample = s;
+  means.push(s.mean);
+  document.getElementById('drawCount').textContent = means.length;
+  renderSample(s);
+  renderSampling();
+}
+
+function drawMany(count) {
+  let last;
+  for (let i=0; i<count; i++) {
+    last = drawSample();
+    means.push(last.mean);
+  }
+  lastSample = last;
+  document.getElementById('drawCount').textContent = means.length;
+  renderSample(last);
+  renderSampling();
+}
+
+function reset() {
+  means = [];
+  lastSample = [];
+  document.getElementById('drawCount').textContent = 0;
+  document.getElementById('meanvalue').innerHTML = '—';
+  const distKey = document.getElementById('dist').value;
+  const { range } = dists[distKey];
+  Plotly.react('sample-chart', [], {
+    paper_bgcolor:'#fff', plot_bgcolor:'#FAFAFA',
+    margin: { l: 40, r: 20, t: 8, b: 35 },
+    xaxis: { range, gridcolor:'#EEE' },
+    yaxis: { range: [-0.7, 0.7], showticklabels: false, showgrid: false, zeroline: false },
+    font: { family:'Inter, sans-serif', color:'#1A1A1A' }
+  }, { responsive: true, displaylogo: false });
+  renderSampling();
+}
+
+document.getElementById('one').addEventListener('click', drawOne);
+document.getElementById('hundred').addEventListener('click', () => drawMany(100));
+document.getElementById('reset').addEventListener('click', reset);
+document.getElementById('dist').addEventListener('change', reset);
+document.getElementById('n').addEventListener('change', reset);
+
+reset();
+drawOne();
+</script>
+</body>
+</html>

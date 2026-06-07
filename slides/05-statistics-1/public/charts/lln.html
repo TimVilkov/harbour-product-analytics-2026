@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js" charset="utf-8"></script>
+<style>
+  html, body { margin: 0; padding: 0; font-family: 'Inter', system-ui, sans-serif; background: #FFFFFF; color: #1A1A1A; }
+  .controls { padding: 10px 14px 8px 14px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid #E0E0E0; }
+  .controls label { font-family: 'JetBrains Mono', monospace; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.14em; color: #6B6B6B; }
+  button { font-family: 'JetBrains Mono', monospace; font-size: 0.78rem; padding: 6px 14px; border: 1px solid #1A1A1A; background: #FFFFFF; color: #1A1A1A; cursor: pointer; letter-spacing: 0.06em; }
+  button:hover { background: #1A1A1A; color: #FFFFFF; }
+  button.active { background: #FF00FF; color: #FFFFFF; border-color: #FF00FF; }
+  #plot { width: 100%; height: 100%; min-height: 200px; }
+  .note { font-size: 0.72rem; color: #6B6B6B; font-family: 'JetBrains Mono', monospace; margin-left: auto; }
+</style>
+</head>
+<body>
+
+<div class="controls">
+  <label>Experiment</label>
+  <button id="b-die" class="active" onclick="setExp('die')">fair die</button>
+  <button id="b-conv" onclick="setExp('conv')">conversion (p=0.30)</button>
+  <button onclick="run()">Run again</button>
+  <span class="note" id="status"></span>
+</div>
+
+<div id="plot"></div>
+
+<script>
+let currentExp = 'die';
+
+const experiments = {
+  die: {
+    sample: () => Math.floor(Math.random() * 6) + 1,
+    trueMean: 3.5,
+    yRange: [1, 6],
+    yTitle: 'running average of die rolls'
+  },
+  conv: {
+    sample: () => (Math.random() < 0.30 ? 1 : 0),
+    trueMean: 0.30,
+    yRange: [0, 1],
+    yTitle: 'running conversion rate'
+  }
+};
+
+function setExp(name) {
+  currentExp = name;
+  document.getElementById('b-die').classList.toggle('active', name === 'die');
+  document.getElementById('b-conv').classList.toggle('active', name === 'conv');
+  run();
+}
+
+function run() {
+  const exp = experiments[currentExp];
+  const N = 5000;
+  const xs = new Array(N);
+  const ys = new Array(N);
+  let sum = 0;
+  for (let i = 0; i < N; i++) {
+    sum += exp.sample();
+    xs[i] = i + 1;
+    ys[i] = sum / (i + 1);
+  }
+
+  Plotly.newPlot('plot', [
+    {
+      x: xs, y: ys, mode: 'lines',
+      line: { color: '#1A1A1A', width: 1.4 },
+      name: 'running mean'
+    },
+    {
+      x: [1, N], y: [exp.trueMean, exp.trueMean],
+      mode: 'lines',
+      line: { color: '#FF00FF', dash: 'dash', width: 1.4 },
+      name: 'true mean ' + exp.trueMean
+    }
+  ], {
+    margin: { l: 60, r: 30, t: 18, b: 50 },
+    xaxis: { type: 'log', title: 'number of trials (log scale)', gridcolor: '#EEEEEE' },
+    yaxis: { title: exp.yTitle, range: exp.yRange, gridcolor: '#EEEEEE' },
+    showlegend: false,
+    plot_bgcolor: '#FAFAFA',
+    paper_bgcolor: '#FFFFFF',
+    font: { family: 'Inter, system-ui, sans-serif', size: 12, color: '#1A1A1A' }
+  }, { displayModeBar: false, responsive: true });
+
+  document.getElementById('status').textContent = 'final running mean: ' + ys[N-1].toFixed(4);
+}
+
+run();
+</script>
+
+</body>
+</html>

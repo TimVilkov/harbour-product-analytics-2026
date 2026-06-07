@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js" charset="utf-8"></script>
+<style>
+  html, body { margin: 0; padding: 0; font-family: 'Inter', system-ui, sans-serif; background: #FFFFFF; color: #1A1A1A; }
+  #plot { width: 100%; height: 100%; min-height: 220px; }
+</style>
+</head>
+<body>
+
+<div id="plot"></div>
+
+<script>
+// Deterministic seeded noise so chart is reproducible
+function mulberry32(seed) {
+  return function() {
+    let t = (seed += 0x6D2B79F5);
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function rnorm(rng) {
+  // Box-Muller
+  const u1 = rng();
+  const u2 = rng();
+  return Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+}
+
+const rng = mulberry32(42);
+const N = 90;
+const changeDay = 45;
+const baselineMean = 1000;
+const afterMean = 1050;   // ~5% lift, plausible but small
+const sigma = 150;
+
+const days = [];
+const values = [];
+for (let i = 1; i <= N; i++) {
+  days.push(i);
+  const mean = i <= changeDay ? baselineMean : afterMean;
+  values.push(Math.round(mean + sigma * rnorm(rng)));
+}
+
+Plotly.newPlot('plot', [
+  {
+    x: days, y: values, mode: 'lines+markers',
+    line: { color: '#1A1A1A', width: 1.4 },
+    marker: { size: 5, color: '#1A1A1A' },
+    name: 'daily revenue'
+  }
+], {
+  margin: { l: 60, r: 30, t: 40, b: 50 },
+  xaxis: { title: 'day', gridcolor: '#EEEEEE', zeroline: false },
+  yaxis: { title: 'daily revenue, EUR', gridcolor: '#EEEEEE', zeroline: false },
+  showlegend: false,
+  plot_bgcolor: '#FAFAFA',
+  paper_bgcolor: '#FFFFFF',
+  font: { family: 'Inter, system-ui, sans-serif', size: 12, color: '#1A1A1A' },
+  shapes: [{
+    type: 'line',
+    x0: changeDay, x1: changeDay,
+    yref: 'paper', y0: 0, y1: 1,
+    line: { color: '#FF00FF', dash: 'dash', width: 1.6 }
+  }],
+  annotations: [
+    {
+      x: changeDay, yref: 'paper', y: 1.06,
+      text: 'feature launched',
+      showarrow: false,
+      font: { color: '#FF00FF', size: 11, family: 'JetBrains Mono' }
+    },
+    {
+      x: changeDay - 22, yref: 'paper', y: 0.06,
+      text: 'before',
+      showarrow: false,
+      font: { color: '#6B6B6B', size: 11, family: 'JetBrains Mono' }
+    },
+    {
+      x: changeDay + 22, yref: 'paper', y: 0.06,
+      text: 'after',
+      showarrow: false,
+      font: { color: '#6B6B6B', size: 11, family: 'JetBrains Mono' }
+    }
+  ]
+}, { displayModeBar: false, responsive: true });
+</script>
+
+</body>
+</html>

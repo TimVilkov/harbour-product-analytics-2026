@@ -1,0 +1,195 @@
+/* ============================================================
+   Course design system on top of @slidev/theme-apple-basic
+   Two fonts. Two colors plus pink accent. Persistent header bar.
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root {
+  --pink: #FF00FF;
+  --ink:  #1A1A1A;
+  --muted: #6B6B6B;
+  --hairline: #1A1A1A;
+
+  /* Section divider tints — rotate via frontmatter `tint:` */
+  --tint-lavender: #DDB7E8;
+  --tint-rose:     #E8C5C5;
+  --tint-mint:     #BFE5C8;
+  --tint-cream:    #F5E6C8;
+  --tint-sky:      #BBD8E8;
+
+  --slidev-theme-primary: var(--pink);
+}
+
+/* === Base typography ============================================ */
+.slidev-layout {
+  font-family: 'Inter', -apple-system, system-ui, sans-serif;
+  color: var(--ink);
+  /* Top padding leaves room for the persistent header */
+  padding: 5.5rem 3.5rem 3rem 3.5rem;
+  user-select: text;
+  -webkit-user-select: text;
+}
+.slidev-layout p,
+.slidev-layout li,
+.slidev-layout td,
+.slidev-layout code,
+.slidev-layout pre {
+  user-select: text;
+  -webkit-user-select: text;
+}
+.slidev-layout a {
+  color: #1A1A1A;
+}
+.slidev-layout a:hover {
+  color: var(--pink);
+}
+
+.slidev-layout h1,
+.slidev-layout h2 {
+  font-family: 'Bricolage Grotesque', 'Inter', sans-serif;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+
+.slidev-layout h1 {
+  font-size: 3rem;
+  line-height: 1.1;
+  margin-bottom: 1.5rem;
+}
+
+.slidev-layout h2 {
+  font-size: 1.6rem;
+  font-weight: 600;
+  color: var(--muted);
+  letter-spacing: -0.01em;
+}
+
+.slidev-layout p,
+.slidev-layout li {
+  font-size: 1.25rem;
+  line-height: 1.55;
+  color: var(--ink);
+}
+
+.slidev-layout strong, .slidev-layout b { font-weight: 700; }
+
+/* The single inline accent. Use as `<span class="pink">word</span>` */
+.pink, .slidev-layout .pink { color: var(--pink); font-weight: 800; }
+
+/* === Intro / hero (black background, white type, pink accent) ==== */
+.slidev-layout.intro,
+.slidev-layout.intro-image-right {
+  background: #000;
+  color: #fff;
+  padding-top: 5.5rem;
+}
+.slidev-layout.intro h1,
+.slidev-layout.intro-image-right h1 {
+  color: #fff;
+  font-size: 5.2rem;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+}
+.slidev-layout.intro h1 + p,
+.slidev-layout.intro-image-right h1 + p {
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 1.5rem;
+  font-weight: 400;
+}
+.slidev-layout.intro p,
+.slidev-layout.intro-image-right p { color: rgba(255, 255, 255, 0.85); }
+
+/* === Section divider (tinted background, big number + name) ====== */
+.slidev-layout.section { padding-top: 5.5rem; }
+.slidev-layout.section h1 {
+  font-size: 4.8rem;
+  font-weight: 800;
+  line-height: 1.05;
+  color: var(--ink);
+}
+.slidev-layout.section h2 {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: var(--ink);
+  opacity: 0.5;
+  font-weight: 500;
+  margin-bottom: 1rem;
+}
+
+/* Tinted backgrounds via slide frontmatter `class: "tint-<name>"` */
+.slidev-layout.section.tint-lavender { background: var(--tint-lavender); }
+.slidev-layout.section.tint-rose     { background: var(--tint-rose); }
+.slidev-layout.section.tint-mint     { background: var(--tint-mint); }
+.slidev-layout.section.tint-cream    { background: var(--tint-cream); }
+.slidev-layout.section.tint-sky      { background: var(--tint-sky); }
+
+/* === Statement (single big centered claim) ======================= */
+.slidev-layout.statement h1 {
+  font-size: 3.4rem;
+  font-weight: 800;
+  line-height: 1.15;
+  text-align: center;
+}
+
+/* === Fact (large stat, but readable not overwhelming) ============ */
+.slidev-layout.fact h1 {
+  font-size: 4.4rem;
+  font-weight: 800;
+  color: var(--pink);
+  line-height: 1.05;
+}
+.slidev-layout.fact h1 + p {
+  color: var(--ink);
+  font-size: 1.2rem;
+  font-weight: 400;
+  text-align: center;
+  margin-top: 1rem;
+  max-width: 32rem;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* === Quote ======================================================= */
+.slidev-layout.quote {
+  display: grid;
+  place-content: center;
+  text-align: center;
+}
+.slidev-layout.quote h1 {
+  font-family: 'Bricolage Grotesque', sans-serif;
+  font-size: 2.2rem;
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: -0.01em;
+  max-width: 56rem;
+  margin: 0 auto 1.5rem;
+}
+.slidev-layout.quote h1 + p {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+  margin: 0;
+}
+
+/* === Default content slide ======================================= */
+/* List markers are explicit per slide via <span> elements.
+   No global ::before counter — it collided with manual numbering. */
+
+/* === Persistent slide page number bottom-right (Slidev built-in styled) === */
+.slidev-page {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  color: var(--muted);
+  bottom: 1rem;
+  right: 1.5rem;
+}
+.slidev-layout.intro .slidev-page,
+.slidev-layout.intro-image-right .slidev-page {
+  color: rgba(255, 255, 255, 0.45);
+}

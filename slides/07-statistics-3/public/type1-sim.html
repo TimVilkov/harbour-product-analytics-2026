@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>Type I error simulation</title>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]});"></script>
+<style>
+:root{--pink:#FF00FF;--ink:#1A1A1A;--muted:#6B6B6B;--bg:#FAFAFA;--red:#E5142B;--green:#1A8F4F}
+*{box-sizing:border-box}
+body{margin:0;font-family:'Inter',system-ui,-apple-system,sans-serif;color:var(--ink);background:#fff;padding:2rem 2.5rem;max-width:1100px;margin-inline:auto}
+h1{font-family:'Bricolage Grotesque','Inter',sans-serif;font-weight:800;font-size:2.2rem;letter-spacing:-0.02em;margin:0 0 0.4rem}
+p.lead{color:var(--muted);font-size:1rem;line-height:1.55;margin:0 0 1.2rem;max-width:54rem}
+.setup{background:var(--bg);border-left:3px solid var(--ink);padding:0.7rem 1rem;margin-bottom:1rem;font-size:0.92rem;line-height:1.55}
+.setup .label{font-family:'JetBrains Mono',monospace;font-size:0.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;margin-right:0.4rem}
+.controls{display:flex;gap:1rem;align-items:center;flex-wrap:wrap;padding:0.8rem 1rem;background:var(--bg);border-left:3px solid var(--pink);margin-bottom:1rem;font-size:0.95rem}
+.controls label{font-family:'JetBrains Mono',monospace;font-size:0.85rem;color:var(--ink);text-transform:uppercase;letter-spacing:0.08em}
+.controls select,.controls button,.controls input{font-family:'Inter',sans-serif;font-size:0.95rem;padding:0.4rem 0.8rem;border:1.4px solid var(--ink);background:#fff;color:var(--ink);cursor:pointer}
+.controls button{background:var(--ink);color:#fff}
+.controls button:hover{background:var(--pink)}
+.controls button.secondary{background:#fff;color:var(--ink)}
+.info{font-family:'JetBrains Mono',monospace;font-size:0.85rem;color:var(--muted);margin-left:auto}
+#chart{width:100%;height:420px}
+.tracker{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:1rem;padding:0.8rem 1rem;background:var(--bg);border-left:3px solid var(--ink);margin:0.6rem 0;font-family:'JetBrains Mono',monospace;font-size:0.95rem}
+.tracker .label{display:block;color:var(--muted);text-transform:uppercase;font-size:0.72rem;letter-spacing:0.1em;margin-bottom:0.2rem}
+.tracker .val{font-weight:700;font-size:1.1rem}
+.tracker .miss{color:var(--red)}
+.tracker .ok{color:var(--green)}
+.note{margin-top:1rem;color:var(--muted);font-size:0.85rem;line-height:1.55}
+.pink{color:var(--pink);font-weight:700}
+.red{color:var(--red);font-weight:700}
+</style>
+</head>
+<body>
+<h1>Type I error under $H_0$</h1>
+<p class="lead">We simulate the one-sample test of $H_0: p = 0.5$ on Bernoulli data. Each draw produces a sample of size $n$ from $\text{Bernoulli}(0.5)$, so $H_0$ is true by construction. We compute the standardised statistic $Z = (\bar X - 0.5) / (0.5/\sqrt{n})$, which under $H_0$ is approximately $\mathcal{N}(0,1)$ by CLT. The shaded region is the <span class="red">rejection region</span>: where the test would reject $H_0$. Because $H_0$ is true here, every rejection is a Type I error. The empirical false-positive rate converges to $\alpha$.</p>
+
+<div class="setup">
+<div><span class="label">data</span> $X_1, \dots, X_n \sim \text{Bernoulli}(0.5)$, so $\mathbb{E}[X] = 0.5$, $\sigma = 0.5$, $H_0$ is true</div>
+<div style="margin-top:0.2rem;"><span class="label">statistic</span> $Z = (\bar X - 0.5)/(0.5/\sqrt{n})$, with $Z \approx \mathcal{N}(0, 1)$ under $H_0$ by CLT</div>
+<div style="margin-top:0.2rem;"><span class="label">decision</span> reject $H_0$ if $Z$ falls in the rejection region $C_\alpha$</div>
+</div>
+
+<div class="controls">
+  <label for="n">n</label>
+  <select id="n">
+    <option>10</option>
+    <option selected>30</option>
+    <option>100</option>
+    <option>1000</option>
+  </select>
+  <label for="alpha">α</label>
+  <select id="alpha">
+    <option value="0.05" selected>5%</option>
+    <option value="0.01">1%</option>
+    <option value="0.001">0.1%</option>
+  </select>
+  <label for="alt">alternative</label>
+  <select id="alt">
+    <option value="two">two-sided · μ ≠ 0</option>
+    <option value="greater">one-sided · μ &gt; 0</option>
+    <option value="less">one-sided · μ &lt; 0</option>
+  </select>
+  <button id="draw100">Draw 100 more</button>
+  <button id="draw5000">Draw 5000 more</button>
+  <button id="reset" class="secondary">Reset</button>
+  <span class="info">cutoff: <span id="cutoff">—</span></span>
+</div>
+
+<div class="tracker">
+  <div><span class="label">total draws</span><span id="total" class="val">0</span></div>
+  <div><span class="label">rejected H₀</span><span id="rejected" class="val miss">0</span></div>
+  <div><span class="label">empirical Type I rate</span><span id="rate" class="val">—</span></div>
+  <div><span class="label">target α</span><span id="target" class="val">5%</span></div>
+</div>
+
+<div id="chart"></div>
+
+<p class="note">Try each <strong>α</strong>: smaller α means a narrower rejection region and fewer false positives. Try each <strong>alternative</strong>: greater puts all of α in the right tail, less in the left tail, two-sided splits α/2 to each side. The decision rule is something we design. The data has not changed.</p>
+
+<script>
+const zMap2 = { '0.05': 1.96,    '0.01': 2.5758, '0.001': 3.2905 };
+const zMap1 = { '0.05': 1.6449,  '0.01': 2.3263, '0.001': 3.0902 };
+
+let zValues = [];
+
+function rnorm() {
+  const u = 1 - Math.random(), v = Math.random();
+  return Math.sqrt(-2*Math.log(u)) * Math.cos(2*Math.PI*v);
+}
+
+function normalPdf(x) { return Math.exp(-x*x/2) / Math.sqrt(2*Math.PI); }
+
+function getCutoffs() {
+  const alpha = document.getElementById('alpha').value;
+  const alt = document.getElementById('alt').value;
+  if (alt === 'two') {
+    const z = zMap2[alpha];
+    return { lo: -z, hi: z, kind: 'two' };
+  } else if (alt === 'greater') {
+    return { lo: -Infinity, hi: zMap1[alpha], kind: 'greater' };
+  } else {
+    return { lo: -zMap1[alpha], hi: Infinity, kind: 'less' };
+  }
+}
+
+function isRejection(z, c) {
+  if (c.kind === 'two') return z < c.lo || z > c.hi;
+  if (c.kind === 'greater') return z > c.hi;
+  return z < c.lo;
+}
+
+function draw(count) {
+  const n = parseInt(document.getElementById('n').value);
+  const p0 = 0.5;
+  const sigma0 = Math.sqrt(p0 * (1 - p0)); // 0.5
+  for (let k = 0; k < count; k++) {
+    let s = 0;
+    for (let i = 0; i < n; i++) s += (Math.random() < p0) ? 1 : 0;
+    const xbar = s / n;
+    const z = (xbar - p0) / (sigma0 / Math.sqrt(n));
+    zValues.push(z);
+  }
+  update();
+}
+
+function update() {
+  const c = getCutoffs();
+  const alpha = document.getElementById('alpha').value;
+  const total = zValues.length;
+  const rejected = zValues.filter(z => isRejection(z, c)).length;
+  document.getElementById('total').textContent = total;
+  document.getElementById('rejected').textContent = rejected;
+  document.getElementById('rate').textContent = total ? ((rejected/total)*100).toFixed(2) + '%' : '—';
+  document.getElementById('target').textContent = (parseFloat(alpha)*100).toFixed(1).replace(/\.0$/, '') + '%';
+
+  let cutoffText = '';
+  if (c.kind === 'two') cutoffText = `|Z| > ${c.hi.toFixed(3)}`;
+  else if (c.kind === 'greater') cutoffText = `Z > ${c.hi.toFixed(3)}`;
+  else cutoffText = `Z < ${c.lo.toFixed(3)}`;
+  document.getElementById('cutoff').textContent = cutoffText;
+
+  // N(0,1) curve
+  const xs = [], ys = [];
+  for (let x = -4.5; x <= 4.5; x += 0.05) { xs.push(x); ys.push(normalPdf(x)); }
+
+  const curve = {
+    x: xs, y: ys, mode: 'lines', type: 'scatter',
+    line: { color: '#1A1A1A', width: 1.8 }, name: 'N(0,1) under H₀',
+    hoverinfo: 'skip'
+  };
+
+  // Shaded rejection region
+  const shadeTraces = [];
+  if (c.kind === 'two') {
+    const leftXs = xs.filter(x => x <= c.lo);
+    const leftYs = leftXs.map(x => normalPdf(x));
+    const rightXs = xs.filter(x => x >= c.hi);
+    const rightYs = rightXs.map(x => normalPdf(x));
+    shadeTraces.push({ x: leftXs.concat([c.lo]), y: leftYs.concat([0]), fill: 'tozeroy', fillcolor: 'rgba(229,20,43,0.25)', line: { color: 'rgba(0,0,0,0)' }, type: 'scatter', mode: 'lines', hoverinfo: 'skip', showlegend: false });
+    shadeTraces.push({ x: [c.hi].concat(rightXs), y: [0].concat(rightYs), fill: 'tozeroy', fillcolor: 'rgba(229,20,43,0.25)', line: { color: 'rgba(0,0,0,0)' }, type: 'scatter', mode: 'lines', hoverinfo: 'skip', showlegend: false });
+  } else if (c.kind === 'greater') {
+    const rXs = xs.filter(x => x >= c.hi);
+    const rYs = rXs.map(x => normalPdf(x));
+    shadeTraces.push({ x: [c.hi].concat(rXs), y: [0].concat(rYs), fill: 'tozeroy', fillcolor: 'rgba(229,20,43,0.25)', line: { color: 'rgba(0,0,0,0)' }, type: 'scatter', mode: 'lines', hoverinfo: 'skip', showlegend: false });
+  } else {
+    const lXs = xs.filter(x => x <= c.lo);
+    const lYs = lXs.map(x => normalPdf(x));
+    shadeTraces.push({ x: lXs.concat([c.lo]), y: lYs.concat([0]), fill: 'tozeroy', fillcolor: 'rgba(229,20,43,0.25)', line: { color: 'rgba(0,0,0,0)' }, type: 'scatter', mode: 'lines', hoverinfo: 'skip', showlegend: false });
+  }
+
+  // Build single bar trace with per-bin coloring on shared density scale
+  const binSize = 0.2;
+  const binStart = -5;
+  const binEnd = 5;
+  const numBins = Math.round((binEnd - binStart) / binSize);
+  const counts = new Array(numBins).fill(0);
+  for (const z of zValues) {
+    if (z < binStart || z >= binEnd) continue;
+    const idx = Math.floor((z - binStart) / binSize);
+    counts[idx]++;
+  }
+  const totalForDensity = Math.max(1, zValues.length);
+  const binCenters = [];
+  const densities = [];
+  const colors = [];
+  for (let i = 0; i < numBins; i++) {
+    const center = binStart + (i + 0.5) * binSize;
+    binCenters.push(center);
+    densities.push(counts[i] / (totalForDensity * binSize));
+    colors.push(isRejection(center, c) ? '#E5142B' : '#1A1A1A');
+  }
+  const hist = {
+    x: binCenters, y: densities, type: 'bar',
+    marker: { color: colors, line: { color: '#fff', width: 0.5 } },
+    width: binSize * 0.95,
+    name: 'simulated Z',
+    hoverinfo: 'skip',
+    showlegend: false
+  };
+  const legendBlack = { x: [null], y: [null], type: 'bar', marker: { color: '#1A1A1A' }, name: 'simulated Z (kept)', showlegend: true, hoverinfo: 'skip' };
+  const legendRed = { x: [null], y: [null], type: 'bar', marker: { color: '#E5142B' }, name: 'rejected', showlegend: true, hoverinfo: 'skip' };
+
+  const shapes = [];
+  if (c.kind === 'two' || c.kind === 'less') {
+    shapes.push({ type: 'line', x0: c.lo, x1: c.lo, y0: 0, y1: 1, yref: 'paper', line: { color: '#E5142B', width: 2, dash: 'dash' } });
+  }
+  if (c.kind === 'two' || c.kind === 'greater') {
+    shapes.push({ type: 'line', x0: c.hi, x1: c.hi, y0: 0, y1: 1, yref: 'paper', line: { color: '#E5142B', width: 2, dash: 'dash' } });
+  }
+
+  const layout = {
+    paper_bgcolor: '#fff', plot_bgcolor: '#FAFAFA',
+    margin: { l: 50, r: 30, t: 10, b: 50 },
+    xaxis: { title: 'Z', range: [-5, 5], gridcolor: '#EEE', zerolinecolor: '#CCC' },
+    yaxis: { title: 'density', gridcolor: '#EEE', autorange: true },
+    font: { family: 'Inter, sans-serif', color: '#1A1A1A' },
+    showlegend: true,
+    legend: { x: 1, y: 1, xanchor: 'right', bgcolor: 'rgba(255,255,255,0.9)' },
+    shapes,
+    barmode: 'overlay'
+  };
+
+  Plotly.react('chart', shadeTraces.concat([hist, legendBlack, legendRed, curve]), layout, { responsive: true, displaylogo: false });
+}
+
+function reset() {
+  zValues = [];
+  update();
+}
+
+document.getElementById('draw100').addEventListener('click', () => draw(100));
+document.getElementById('draw5000').addEventListener('click', () => draw(5000));
+document.getElementById('reset').addEventListener('click', reset);
+document.getElementById('n').addEventListener('change', reset);
+document.getElementById('alpha').addEventListener('change', update);
+document.getElementById('alt').addEventListener('change', update);
+
+reset();
+draw(100);
+</script>
+</body>
+</html>

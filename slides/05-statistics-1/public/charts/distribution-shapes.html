@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js" charset="utf-8"></script>
+<style>
+  html, body { margin: 0; padding: 0; font-family: 'Inter', system-ui, sans-serif; background: #FFFFFF; color: #1A1A1A; }
+  #plot { width: 100%; height: 100%; min-height: 200px; }
+</style>
+</head>
+<body>
+
+<div id="plot"></div>
+
+<script>
+function normalPdf(x, mu, sigma) {
+  const z = (x - mu) / sigma;
+  return Math.exp(-0.5 * z * z) / (sigma * Math.sqrt(2 * Math.PI));
+}
+function lognormalPdf(x, mu, sigma) {
+  if (x <= 0) return 0;
+  const z = (Math.log(x) - mu) / sigma;
+  return Math.exp(-0.5 * z * z) / (x * sigma * Math.sqrt(2 * Math.PI));
+}
+
+// Symmetric: heights, N(170, 8)
+const x1 = [], y1 = [];
+for (let x = 140; x <= 200; x += 0.5) { x1.push(x); y1.push(normalPdf(x, 170, 8)); }
+
+// Right-skewed: revenue per user, lognormal mu=4, sigma=0.6
+const x2 = [], y2 = [];
+for (let x = 0.5; x <= 250; x += 1) { x2.push(x); y2.push(lognormalPdf(x, 4, 0.6)); }
+
+// Bimodal: two segments, mixture of N(30,7) and N(70,7)
+const x3 = [], y3 = [];
+for (let x = 0; x <= 100; x += 0.5) {
+  x3.push(x);
+  y3.push(0.5 * normalPdf(x, 30, 7) + 0.5 * normalPdf(x, 70, 7));
+}
+
+Plotly.newPlot('plot', [
+  { x: x1, y: y1, type: 'scatter', mode: 'lines', line: { color: '#1A1A1A', width: 2 }, xaxis: 'x1', yaxis: 'y1', hoverinfo: 'skip', showlegend: false },
+  { x: x2, y: y2, type: 'scatter', mode: 'lines', line: { color: '#1A1A1A', width: 2 }, xaxis: 'x2', yaxis: 'y2', hoverinfo: 'skip', showlegend: false },
+  { x: x3, y: y3, type: 'scatter', mode: 'lines', line: { color: '#1A1A1A', width: 2 }, xaxis: 'x3', yaxis: 'y3', hoverinfo: 'skip', showlegend: false }
+], {
+  grid: { rows: 1, columns: 3, pattern: 'independent' },
+  margin: { l: 28, r: 16, t: 38, b: 50 },
+  xaxis:  { domain: [0.00, 0.30], title: { text: 'height, cm',       standoff: 6 }, gridcolor: '#EEEEEE', zeroline: false, showticklabels: false },
+  yaxis:  { domain: [0,    0.95], showticklabels: false, gridcolor: '#EEEEEE', zeroline: false },
+  xaxis2: { domain: [0.35, 0.65], title: { text: 'revenue per user, EUR', standoff: 6 }, gridcolor: '#EEEEEE', zeroline: false, showticklabels: false },
+  yaxis2: { domain: [0,    0.95], showticklabels: false, gridcolor: '#EEEEEE', zeroline: false, anchor: 'x2' },
+  xaxis3: { domain: [0.70, 1.00], title: { text: 'session length',   standoff: 6 }, gridcolor: '#EEEEEE', zeroline: false, showticklabels: false },
+  yaxis3: { domain: [0,    0.95], showticklabels: false, gridcolor: '#EEEEEE', zeroline: false, anchor: 'x3' },
+  plot_bgcolor: '#FAFAFA',
+  paper_bgcolor: '#FFFFFF',
+  font: { family: 'Inter, system-ui, sans-serif', size: 11, color: '#1A1A1A' },
+  annotations: [
+    { x: 0.15, xref: 'paper', y: 1.06, yref: 'paper', text: 'symmetric — normal',            showarrow: false, font: { color: '#6B6B6B', size: 11 } },
+    { x: 0.50, xref: 'paper', y: 1.06, yref: 'paper', text: 'right-skewed — lognormal',      showarrow: false, font: { color: '#6B6B6B', size: 11 } },
+    { x: 0.85, xref: 'paper', y: 1.06, yref: 'paper', text: 'bimodal — mixture of two',      showarrow: false, font: { color: '#6B6B6B', size: 11 } }
+  ]
+}, { displayModeBar: false, responsive: true });
+</script>
+
+</body>
+</html>

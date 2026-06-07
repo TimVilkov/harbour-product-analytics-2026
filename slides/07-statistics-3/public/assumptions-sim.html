@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>When assumptions break</title>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]});"></script>
+<style>
+:root{--pink:#FF00FF;--ink:#1A1A1A;--muted:#6B6B6B;--bg:#FAFAFA;--red:#E5142B;--green:#1A8F4F}
+*{box-sizing:border-box}
+body{margin:0;font-family:'Inter',system-ui,-apple-system,sans-serif;color:var(--ink);background:#fff;padding:2rem 2.5rem;max-width:1100px;margin-inline:auto}
+h1{font-family:'Bricolage Grotesque','Inter',sans-serif;font-weight:800;font-size:2.2rem;letter-spacing:-0.02em;margin:0 0 0.4rem}
+p.lead{color:var(--muted);font-size:1rem;line-height:1.55;margin:0 0 1.2rem;max-width:54rem}
+.setup{background:var(--bg);border-left:3px solid var(--ink);padding:0.7rem 1rem;margin-bottom:1rem;font-size:0.92rem;line-height:1.55}
+.setup .label{font-family:'JetBrains Mono',monospace;font-size:0.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;margin-right:0.4rem}
+.controls{display:flex;gap:1rem;align-items:center;flex-wrap:wrap;padding:0.8rem 1rem;background:var(--bg);border-left:3px solid var(--red);margin-bottom:1rem;font-size:0.95rem}
+.controls label{font-family:'JetBrains Mono',monospace;font-size:0.85rem;color:var(--ink);text-transform:uppercase;letter-spacing:0.08em}
+.controls select,.controls button,.controls input{font-family:'Inter',sans-serif;font-size:0.95rem;padding:0.4rem 0.8rem;border:1.4px solid var(--ink);background:#fff;color:var(--ink);cursor:pointer}
+.controls button{background:var(--ink);color:#fff}
+.controls button:hover{background:var(--red)}
+.controls button.secondary{background:#fff;color:var(--ink)}
+.info{font-family:'JetBrains Mono',monospace;font-size:0.85rem;color:var(--muted);margin-left:auto}
+#chart{width:100%;height:380px}
+.tracker{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:1rem;padding:0.8rem 1rem;background:var(--bg);border-left:3px solid var(--ink);margin:0.6rem 0;font-family:'JetBrains Mono',monospace;font-size:0.95rem}
+.tracker .label{display:block;color:var(--muted);text-transform:uppercase;font-size:0.72rem;letter-spacing:0.1em;margin-bottom:0.2rem}
+.tracker .val{font-weight:700;font-size:1.1rem}
+.tracker .miss{color:var(--red)}
+.tracker .ok{color:var(--green)}
+.note{margin-top:1rem;color:var(--muted);font-size:0.85rem;line-height:1.55}
+.red{color:var(--red);font-weight:700}
+</style>
+</head>
+<body>
+<h1>When assumptions break</h1>
+<p class="lead">The Z test promises Type I rate $\alpha$ <em>only if</em> the data matches its assumptions. We compute $Z = \sqrt{n}\,\bar X$, with the test assuming iid $\mathcal{N}(0, 1)$. Switch the source to $t(3)$, which has heavy tails and variance $3$ instead of $1$. The test does not know this and still uses $\sigma = 1$, so the empirical Type I rate climbs above $\alpha$.</p>
+
+<div class="setup">
+<div><span class="label">data</span> we draw $n$ observations, varying their source (see knob below)</div>
+<div style="margin-top:0.2rem;"><span class="label">statistic</span> $Z = \sqrt{n}\,\bar X$, the procedure assumes iid $\mathcal{N}(0, 1)$</div>
+<div style="margin-top:0.2rem;"><span class="label">true Type I rate</span> fraction of draws with $|Z|$ past the cutoff, with $\mathbb{E}[X] = 0$ under all sources</div>
+</div>
+
+<div class="controls">
+  <label for="source">source</label>
+  <select id="source">
+    <option value="normal">iid Normal(0, 1) · baseline</option>
+    <option value="t3" selected>iid t(3) · heavy tails</option>
+  </select>
+  <label for="n">n</label>
+  <select id="n">
+    <option>100</option>
+    <option selected>500</option>
+    <option>2000</option>
+  </select>
+  <label for="alpha">α</label>
+  <select id="alpha">
+    <option value="0.05" selected>5%</option>
+    <option value="0.01">1%</option>
+    <option value="0.001">0.1%</option>
+  </select>
+  <button id="draw2000">Draw 2000 more</button>
+  <button id="draw10000">Draw 10000 more</button>
+  <button id="reset" class="secondary">Reset</button>
+  <span class="info">cutoff: <span id="cutoff">|Z| > 1.960</span></span>
+</div>
+
+<div class="tracker">
+  <div><span class="label">total draws</span><span id="total" class="val">0</span></div>
+  <div><span class="label">rejected H₀</span><span id="rejected" class="val miss">0</span></div>
+  <div><span class="label">empirical Type I rate</span><span id="rate" class="val">—</span></div>
+  <div><span class="label">target α</span><span id="target" class="val">5%</span></div>
+</div>
+
+<div id="chart"></div>
+
+<p class="note">Baseline Normal: empirical rate sits at $\alpha$, procedure works. <span class="red">t(3)</span>: finite variance ($3$), but the procedure assumes $\sigma^2 = 1$. So $Z$ has variance $3$ under $H_0$, with tails about three times wider than $\mathcal{N}(0, 1)$, and the empirical Type I rate climbs above $\alpha$.</p>
+
+<script>
+const zMap2 = { '0.05': 1.96, '0.01': 2.5758, '0.001': 3.2905 };
+let zValues = [];
+
+function rnorm() {
+  const u = 1 - Math.random(), v = Math.random();
+  return Math.sqrt(-2*Math.log(u)) * Math.cos(2*Math.PI*v);
+}
+
+function rcauchy() {
+  return Math.tan(Math.PI * (Math.random() - 0.5));
+}
+
+function rt3() {
+  // t(3) = Z / sqrt(W/3) where W ~ chi-square(3) = sum of 3 squared Normals
+  const z = rnorm();
+  const w = rnorm()**2 + rnorm()**2 + rnorm()**2;
+  return z / Math.sqrt(w / 3);
+}
+
+function drawSampleMean(n, source) {
+  if (source === 'normal') {
+    let s = 0;
+    for (let i = 0; i < n; i++) s += rnorm();
+    return s / n;
+  }
+  if (source === 'cauchy') {
+    let s = 0;
+    for (let i = 0; i < n; i++) s += rcauchy();
+    return s / n;
+  }
+  if (source === 't3') {
+    let s = 0;
+    for (let i = 0; i < n; i++) s += rt3();
+    return s / n;
+  }
+  if (source === 'block10' || source === 'block100') {
+    const k = source === 'block10' ? 10 : 100;
+    const numBlocks = Math.max(1, Math.floor(n / k));
+    let s = 0;
+    for (let b = 0; b < numBlocks; b++) {
+      const v = rnorm();
+      for (let j = 0; j < k; j++) s += v;
+    }
+    // any remainder treated as a final partial block with a fresh draw
+    const rem = n - numBlocks * k;
+    if (rem > 0) {
+      const v = rnorm();
+      for (let j = 0; j < rem; j++) s += v;
+    }
+    return s / n;
+  }
+  return 0;
+}
+
+function draw(count) {
+  const n = parseInt(document.getElementById('n').value);
+  const source = document.getElementById('source').value;
+  for (let k = 0; k < count; k++) {
+    const xbar = drawSampleMean(n, source);
+    const z = Math.sqrt(n) * xbar;
+    zValues.push(z);
+  }
+  update();
+}
+
+function update() {
+  const alpha = document.getElementById('alpha').value;
+  const z_cut = zMap2[alpha];
+  const total = zValues.length;
+  const rejected = zValues.filter(z => z < -z_cut || z > z_cut).length;
+  document.getElementById('total').textContent = total;
+  document.getElementById('rejected').textContent = rejected;
+  document.getElementById('rate').textContent = total ? ((rejected/total)*100).toFixed(2) + '%' : '—';
+  document.getElementById('target').textContent = (parseFloat(alpha)*100).toFixed(1).replace(/\.0$/, '') + '%';
+  document.getElementById('cutoff').textContent = `|Z| > ${z_cut.toFixed(3)}`;
+
+  // Determine plot range: clip extreme Cauchy/block tails so binned chart stays readable
+  const plotMin = -10, plotMax = 10;
+
+  // N(0,1) curve (the test's claimed distribution)
+  const xs = [], ys = [];
+  for (let x = plotMin; x <= plotMax; x += 0.1) { xs.push(x); ys.push(Math.exp(-x*x/2)/Math.sqrt(2*Math.PI)); }
+  const curve = { x: xs, y: ys, mode: 'lines', type: 'scatter', line: { color: '#1A1A1A', width: 1.8 }, name: 'N(0,1) (claimed)', hoverinfo: 'skip' };
+
+  // Histogram with per-bin colouring
+  const binSize = 0.4;
+  const numBins = Math.round((plotMax - plotMin) / binSize);
+  const counts = new Array(numBins).fill(0);
+  let outOfRange = 0;
+  for (const z of zValues) {
+    if (z < plotMin || z >= plotMax) { outOfRange++; continue; }
+    const idx = Math.floor((z - plotMin) / binSize);
+    counts[idx]++;
+  }
+  const totalForDensity = Math.max(1, zValues.length);
+  const binCenters = [], densities = [], colors = [];
+  for (let i = 0; i < numBins; i++) {
+    const c = plotMin + (i + 0.5) * binSize;
+    binCenters.push(c);
+    densities.push(counts[i] / (totalForDensity * binSize));
+    colors.push((c < -z_cut || c > z_cut) ? '#E5142B' : '#1A1A1A');
+  }
+  const hist = { x: binCenters, y: densities, type: 'bar', marker: { color: colors, line: { color: '#fff', width: 0.5 } }, width: binSize * 0.95, name: 'empirical Z', hoverinfo: 'skip', showlegend: false };
+  const legendKept = { x: [null], y: [null], type: 'bar', marker: { color: '#1A1A1A' }, name: 'empirical Z (kept)', hoverinfo: 'skip' };
+  const legendRej = { x: [null], y: [null], type: 'bar', marker: { color: '#E5142B' }, name: 'empirical Z (rejected)', hoverinfo: 'skip' };
+
+  const annotations = [];
+  if (outOfRange > 0) {
+    annotations.push({
+      x: 0.5, y: 1.05, xref: 'paper', yref: 'paper', xanchor: 'center', yanchor: 'bottom',
+      text: `${outOfRange} draw(s) outside [-10, 10] not shown`,
+      showarrow: false, font: { color: '#E5142B', size: 11, family: 'JetBrains Mono, monospace' }
+    });
+  }
+
+  const shapes = [
+    { type: 'line', x0: -z_cut, x1: -z_cut, y0: 0, y1: 1, yref: 'paper', line: { color: '#E5142B', width: 2, dash: 'dash' } },
+    { type: 'line', x0:  z_cut, x1:  z_cut, y0: 0, y1: 1, yref: 'paper', line: { color: '#E5142B', width: 2, dash: 'dash' } }
+  ];
+
+  const layout = {
+    paper_bgcolor: '#fff', plot_bgcolor: '#FAFAFA',
+    margin: { l: 50, r: 30, t: 30, b: 50 },
+    xaxis: { title: 'Z', range: [plotMin, plotMax], gridcolor: '#EEE', zerolinecolor: '#CCC' },
+    yaxis: { title: 'density', gridcolor: '#EEE', autorange: true },
+    font: { family: 'Inter, sans-serif', color: '#1A1A1A' },
+    showlegend: true,
+    legend: { x: 1, y: 1, xanchor: 'right', bgcolor: 'rgba(255,255,255,0.9)' },
+    shapes,
+    annotations
+  };
+
+  Plotly.react('chart', [hist, legendKept, legendRej, curve], layout, { responsive: true, displaylogo: false });
+}
+
+function reset() { zValues = []; update(); }
+
+document.getElementById('draw2000').addEventListener('click', () => draw(2000));
+document.getElementById('draw10000').addEventListener('click', () => draw(10000));
+document.getElementById('reset').addEventListener('click', reset);
+document.getElementById('n').addEventListener('change', () => { reset(); draw(2000); });
+document.getElementById('alpha').addEventListener('change', update);
+document.getElementById('source').addEventListener('change', () => { reset(); draw(2000); });
+
+reset();
+draw(2000);
+</script>
+</body>
+</html>

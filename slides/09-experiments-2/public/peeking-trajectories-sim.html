@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>Peeking trajectories</title>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<style>
+:root{--pink:#FF00FF;--ink:#1A1A1A;--muted:#6B6B6B;--bg:#FAFAFA;--red:#E5142B;--green:#1A8F4F;--gray:#AAAAAA}
+*{box-sizing:border-box}
+body{margin:0;font-family:'Inter',system-ui,-apple-system,sans-serif;color:var(--ink);background:#fff;padding:1.2rem 1.6rem;max-width:1100px;margin-inline:auto}
+h1{font-family:'Bricolage Grotesque','Inter',sans-serif;font-weight:800;font-size:1.5rem;letter-spacing:-0.02em;margin:0 0 0.3rem}
+p.lead{color:var(--muted);font-size:0.86rem;line-height:1.5;margin:0 0 0.7rem}
+.setup{background:var(--bg);border-left:3px solid var(--ink);padding:0.5rem 0.9rem;margin-bottom:0.6rem;font-size:0.82rem;line-height:1.5}
+.setup .label{font-family:'JetBrains Mono',monospace;font-size:0.66rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;margin-right:0.3rem}
+.controls{display:flex;gap:0.8rem;align-items:center;flex-wrap:wrap;padding:0.6rem 0.9rem;background:var(--bg);border-left:3px solid var(--pink);margin-bottom:0.6rem;font-size:0.86rem}
+.controls label{font-family:'JetBrains Mono',monospace;font-size:0.74rem;color:var(--ink);text-transform:uppercase;letter-spacing:0.08em}
+.controls select,.controls button{font-family:'Inter',sans-serif;font-size:0.86rem;padding:0.3rem 0.7rem;border:1.4px solid var(--ink);background:#fff;color:var(--ink);cursor:pointer}
+.controls button{background:var(--ink);color:#fff}
+#chart{width:100%;height:380px}
+.tracker{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.6rem;padding:0.6rem 0.9rem;background:var(--bg);border-left:3px solid var(--ink);margin:0.4rem 0;font-family:'JetBrains Mono',monospace;font-size:0.9rem}
+.tracker .label{display:block;color:var(--muted);text-transform:uppercase;font-size:0.66rem;letter-spacing:0.1em;margin-bottom:0.15rem}
+.tracker .val{font-weight:700;font-size:1.05rem}
+.tracker .red{color:var(--red)}
+.tracker .gray{color:var(--muted)}
+.note{margin-top:0.5rem;color:var(--muted);font-size:0.78rem;line-height:1.5}
+</style>
+</head>
+<body>
+<h1>P-value trajectories on A/A experiments</h1>
+<p class="lead">Every trajectory below is an A/A experiment. Treatment and control are drawn from the same distribution, so there is no true effect. We recompute the p-value every day as the sample grows. Trajectories that crossed α = 0.05 on at least one day are shown in <span style="color:var(--red);font-weight:700">red</span>. A team that stops on first significance would call each of those a win.</p>
+
+<div class="setup">
+<div><span class="label">data</span> X<sub>T</sub>, X<sub>C</sub> ∼ 𝒩(0, 1). H<sub>0</sub> is true by construction. Sample size grows by 100 users per arm per day.</div>
+<div style="margin-top:0.1rem;"><span class="label">test</span> two-sample z-test, p-value = 2 · P(|Z| ≥ |Z<sub>obs</sub>|)</div>
+</div>
+
+<div class="controls">
+  <label for="ntraj">trajectories</label>
+  <select id="ntraj">
+    <option>10</option>
+    <option selected>20</option>
+    <option>50</option>
+  </select>
+  <label for="days">days</label>
+  <select id="days">
+    <option>14</option>
+    <option selected>30</option>
+    <option>60</option>
+  </select>
+  <label for="step">users / day / arm</label>
+  <select id="step">
+    <option>50</option>
+    <option selected>100</option>
+    <option>500</option>
+  </select>
+  <button id="run">Run again</button>
+</div>
+
+<div class="tracker">
+<div><span class="label">trajectories shown</span><span class="val" id="total">-</span></div>
+<div><span class="label">crossed α at least once</span><span class="val red" id="redcount">-</span></div>
+<div><span class="label">share</span><span class="val red" id="share">-</span></div>
+</div>
+
+<div id="chart"></div>
+
+<p class="note">Reading the chart. The dashed line at p = 0.05 is the rejection threshold. Each line is one A/A experiment over time. Trajectories that touched the threshold even once are colored red. The «share» tracker is the empirical false-positive rate of «stop on first significance» on data where there's nothing to win.</p>
+
+<script>
+function randn(){let u=0,v=0;while(u===0)u=Math.random();while(v===0)v=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v)}
+function erf(x){const a=[0.254829592,-0.284496736,1.421413741,-1.453152027,1.061405429];const p=0.3275911;const s=Math.sign(x);const ax=Math.abs(x);const t=1/(1+p*ax);const y=1-(((((a[4]*t+a[3])*t)+a[2])*t+a[1])*t+a[0])*t*Math.exp(-ax*ax);return s*y}
+function normCdf(z){return 0.5*(1+erf(z/Math.SQRT2))}
+
+function simTrajectory(days, step){
+  let sumT=0, sumT2=0, sumC=0, sumC2=0, n=0;
+  const p = new Array(days);
+  for(let d=0;d<days;d++){
+    for(let i=0;i<step;i++){
+      const xt = randn(); sumT+=xt; sumT2+=xt*xt;
+      const xc = randn(); sumC+=xc; sumC2+=xc*xc;
+    }
+    n += step;
+    const meanT = sumT/n, meanC = sumC/n;
+    const varT = (sumT2 - n*meanT*meanT)/(n-1);
+    const varC = (sumC2 - n*meanC*meanC)/(n-1);
+    const se = Math.sqrt(varT/n + varC/n);
+    const z = (meanT - meanC) / se;
+    p[d] = 2*(1 - normCdf(Math.abs(z)));
+  }
+  return p;
+}
+
+function run(){
+  const ntraj = parseInt(document.getElementById('ntraj').value);
+  const days = parseInt(document.getElementById('days').value);
+  const step = parseInt(document.getElementById('step').value);
+  const traces = [];
+  let red = 0;
+  for(let i=0;i<ntraj;i++){
+    const p = simTrajectory(days, step);
+    const everSig = p.some(v => v < 0.05);
+    if(everSig) red++;
+    const color = everSig ? '#E5142B' : '#AAAAAA';
+    const opacity = everSig ? 0.8 : 0.45;
+    traces.push({
+      x: Array.from({length:days}, (_,j)=>j+1),
+      y: p,
+      mode: 'lines',
+      line: {color, width: everSig ? 1.6 : 1.1},
+      opacity,
+      showlegend: false,
+      hovertemplate: 'day %{x}<br>p = %{y:.3f}<extra></extra>'
+    });
+  }
+  document.getElementById('total').textContent = ntraj;
+  document.getElementById('redcount').textContent = red;
+  document.getElementById('share').textContent = (100*red/ntraj).toFixed(0) + '%';
+
+  Plotly.newPlot('chart', traces, {
+    margin:{l:55,r:20,t:10,b:45},
+    xaxis:{title:'day', dtick:5, gridcolor:'#EEE'},
+    yaxis:{title:'p-value', range:[0,1.02], gridcolor:'#EEE'},
+    shapes:[{
+      type:'line', xref:'paper', yref:'y', x0:0, x1:1, y0:0.05, y1:0.05,
+      line:{color:'#E5142B', width:1.5, dash:'dash'}
+    }],
+    annotations:[{
+      x:1, xref:'paper', y:0.05, yref:'y', xanchor:'right', yanchor:'bottom',
+      text:'α = 0.05', showarrow:false, font:{family:'JetBrains Mono', size:11, color:'#E5142B'}
+    }],
+    font:{family:'Inter, sans-serif'},
+    plot_bgcolor:'#fff', paper_bgcolor:'#fff'
+  }, {displayModeBar:false, responsive:true});
+}
+
+document.getElementById('run').addEventListener('click', run);
+document.getElementById('ntraj').addEventListener('change', run);
+document.getElementById('days').addEventListener('change', run);
+document.getElementById('step').addEventListener('change', run);
+run();
+</script>
+</body>
+</html>

@@ -1,0 +1,19 @@
+{
+  "name": "03-sql",
+  "version": "1.0.0",
+  "description": "Session 03: SQL — Product Analytics, Harbour.Space 2026",
+  "type": "commonjs",
+  "scripts": {
+    "dev": "slidev slides.md --open",
+    "build": "slidev build slides.md",
+    "export": "slidev export slides.md"
+  },
+  "dependencies": {
+    "@slidev/cli": "^52.14.2",
+    "@slidev/theme-apple-basic": "^0.25.1",
+    "@slidev/theme-default": "^0.25.0"
+  },
+  "devDependencies": {
+    "playwright-chromium": "^1.59.1"
+  }
+}

@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>Confidence interval coverage</title>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]});"></script>
+<style>
+:root{--pink:#FF00FF;--ink:#1A1A1A;--muted:#6B6B6B;--bg:#FAFAFA}
+*{box-sizing:border-box}
+body{margin:0;font-family:'Inter',system-ui,-apple-system,sans-serif;color:var(--ink);background:#fff;padding:2rem 2.5rem;max-width:1100px;margin-inline:auto}
+h1{font-family:'Bricolage Grotesque','Inter',sans-serif;font-weight:800;font-size:2.2rem;letter-spacing:-0.02em;margin:0 0 0.4rem}
+p.lead{color:var(--muted);font-size:1rem;line-height:1.5;margin:0 0 1.2rem;max-width:54rem}
+.controls{display:flex;gap:1rem;align-items:center;flex-wrap:wrap;padding:0.8rem 1rem;background:var(--bg);border-left:3px solid var(--pink);margin-bottom:1rem;font-size:0.95rem}
+.controls label{font-family:'JetBrains Mono',monospace;font-size:0.85rem;color:var(--ink);text-transform:uppercase;letter-spacing:0.08em}
+.controls select,.controls button,.controls input{font-family:'Inter',sans-serif;font-size:0.95rem;padding:0.4rem 0.8rem;border:1.4px solid var(--ink);background:#fff;color:var(--ink);cursor:pointer}
+.controls button{background:var(--ink);color:#fff}
+.controls button:hover{background:var(--pink)}
+.controls button.secondary{background:#fff;color:var(--ink)}
+.controls button.secondary:hover{background:var(--bg);color:var(--ink);border-color:var(--pink)}
+.info{font-family:'JetBrains Mono',monospace;font-size:0.85rem;color:var(--muted);margin-left:auto}
+#chart{width:100%;height:560px}
+.coverage{padding:0.8rem 1rem;background:var(--bg);border-left:3px solid var(--ink);margin:0.6rem 0;font-family:'JetBrains Mono',monospace;font-size:0.95rem;display:flex;gap:2rem;align-items:center;flex-wrap:wrap}
+.coverage .label{color:var(--muted);text-transform:uppercase;font-size:0.72rem;letter-spacing:0.1em;margin-right:0.4rem}
+.coverage .val{font-weight:700}
+.coverage .ok{color:var(--ink)}
+.coverage .miss{color:var(--pink)}
+.note{margin-top:1rem;color:var(--muted);font-size:0.85rem;line-height:1.55}
+.pink{color:var(--pink);font-weight:700}
+</style>
+</head>
+<body>
+<h1>Confidence interval coverage</h1>
+<p class="lead">The true mean $\mu$ is fixed at 0 (the <span class="pink">pink dashed line</span>). Each black row is one realised 95% CI built from its own random sample of size $n$. The intervals that <span class="pink">miss</span> $\mu$ are coloured pink. The 95% is a property of the procedure across many samples — for any single interval, it either contains $\mu$ or it does not.</p>
+
+<div class="controls">
+  <label for="n">n</label>
+  <select id="n">
+    <option>10</option>
+    <option selected>30</option>
+    <option>100</option>
+  </select>
+  <label for="level">level</label>
+  <select id="level">
+    <option value="0.90">90%</option>
+    <option value="0.95" selected>95%</option>
+    <option value="0.99">99%</option>
+  </select>
+  <button id="draw50">Draw 50 more</button>
+  <button id="draw500">Draw 500 more</button>
+  <button id="reset" class="secondary">Reset</button>
+  <span class="info">total drawn: <span id="total">0</span></span>
+</div>
+
+<div class="coverage">
+  <span><span class="label">covered</span><span id="covered" class="val ok">0</span></span>
+  <span><span class="label">missed</span><span id="missed" class="val miss">0</span></span>
+  <span><span class="label">empirical rate</span><span id="rate" class="val">—</span></span>
+  <span><span class="label">target</span><span id="target" class="val">95%</span></span>
+</div>
+
+<div id="chart"></div>
+
+<p class="note">Set $n$ small (10) to see wider intervals; large $n$ tightens them. Set level to 90% and watch more intervals miss; 99% and few do. Draw many — the empirical coverage rate converges to the target.</p>
+
+<script>
+const MU = 0;
+const SIGMA = 1; // source is N(0, 1), so SE = 1/√n
+const zMap = { '0.90': 1.6449, '0.95': 1.96, '0.99': 2.5758 };
+
+let intervals = []; // {lo, hi, mean, covers}
+let displayCap = 60;
+
+function rnorm() {
+  const u = 1 - Math.random(), v = Math.random();
+  return Math.sqrt(-2*Math.log(u)) * Math.cos(2*Math.PI*v);
+}
+
+function draw(count) {
+  const n = parseInt(document.getElementById('n').value);
+  const z = zMap[document.getElementById('level').value];
+  const se = SIGMA / Math.sqrt(n);
+  for (let k = 0; k < count; k++) {
+    let s = 0;
+    for (let i = 0; i < n; i++) s += rnorm();
+    const mean = s / n;
+    const lo = mean - z * se;
+    const hi = mean + z * se;
+    const covers = lo <= MU && MU <= hi;
+    intervals.push({ lo, hi, mean, covers });
+  }
+  update();
+}
+
+function update() {
+  const total = intervals.length;
+  const covered = intervals.filter(i => i.covers).length;
+  const missed = total - covered;
+  document.getElementById('total').textContent = total;
+  document.getElementById('covered').textContent = covered;
+  document.getElementById('missed').textContent = missed;
+  document.getElementById('rate').textContent = total ? ((covered/total)*100).toFixed(1) + '%' : '—';
+  document.getElementById('target').textContent = (parseFloat(document.getElementById('level').value)*100).toFixed(0) + '%';
+
+  const n = parseInt(document.getElementById('n').value);
+  const z = zMap[document.getElementById('level').value];
+  const se = SIGMA / Math.sqrt(n);
+  const range = Math.max(4 * se, 1.5);
+
+  // Display only the most recent `displayCap` intervals
+  const recent = intervals.slice(-displayCap);
+
+  const traces = [];
+
+  // Covering intervals as one trace per group (limit traces)
+  recent.forEach((iv, idx) => {
+    const y = idx;
+    const color = iv.covers ? '#1A1A1A' : '#FF00FF';
+    traces.push({
+      x: [iv.lo, iv.hi], y: [y, y], mode: 'lines+markers',
+      line: { color, width: 1.6 },
+      marker: { color, size: 4 },
+      hoverinfo: 'skip', showlegend: false
+    });
+    // mean dot
+    traces.push({
+      x: [iv.mean], y: [y], mode: 'markers',
+      marker: { color, size: 4, symbol: 'circle' },
+      hoverinfo: 'skip', showlegend: false
+    });
+  });
+
+  const layout = {
+    paper_bgcolor: '#fff', plot_bgcolor: '#FAFAFA',
+    margin: { l: 50, r: 30, t: 8, b: 40 },
+    xaxis: { range: [MU - range, MU + range], gridcolor: '#EEE', zerolinecolor: '#CCC', title: 'value' },
+    yaxis: { range: [-1, displayCap], showticklabels: false, showgrid: false, zeroline: false, title: { text: `last ${Math.min(displayCap, total)} intervals`, font: { size: 11 } } },
+    font: { family: 'Inter, sans-serif', color: '#1A1A1A' },
+    showlegend: false,
+    shapes: [{
+      type: 'line', x0: MU, x1: MU, y0: 0, y1: 1, yref: 'paper',
+      line: { color: '#FF00FF', width: 2, dash: 'dash' }
+    }],
+    annotations: [{
+      x: MU, y: 1, yref: 'paper', xanchor: 'left', yanchor: 'top',
+      text: ' μ = 0', showarrow: false,
+      font: { color: '#FF00FF', size: 12, family: 'JetBrains Mono, monospace' }
+    }]
+  };
+
+  Plotly.react('chart', traces, layout, { responsive: true, displaylogo: false });
+}
+
+function reset() {
+  intervals = [];
+  update();
+}
+
+document.getElementById('draw50').addEventListener('click', () => draw(50));
+document.getElementById('draw500').addEventListener('click', () => draw(500));
+document.getElementById('reset').addEventListener('click', reset);
+document.getElementById('n').addEventListener('change', reset);
+document.getElementById('level').addEventListener('change', reset);
+
+reset();
+draw(50);
+</script>
+</body>
+</html>

@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>Type M: exaggeration vs power</title>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]});"></script>
+<style>
+:root{--pink:#FF00FF;--ink:#1A1A1A;--muted:#6B6B6B;--bg:#FAFAFA;--red:#E5142B;--green:#1A8F4F}
+*{box-sizing:border-box}
+body{margin:0;font-family:'Inter',system-ui,-apple-system,sans-serif;color:var(--ink);background:#fff;padding:1.2rem 1.6rem;max-width:1100px;margin-inline:auto}
+h1{font-family:'Bricolage Grotesque','Inter',sans-serif;font-weight:800;font-size:1.5rem;letter-spacing:-0.02em;margin:0 0 0.3rem}
+p.lead{color:var(--muted);font-size:0.86rem;line-height:1.5;margin:0 0 0.7rem}
+.setup{background:var(--bg);border-left:3px solid var(--ink);padding:0.5rem 0.9rem;margin-bottom:0.6rem;font-size:0.82rem;line-height:1.5}
+.setup .label{font-family:'JetBrains Mono',monospace;font-size:0.66rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;margin-right:0.3rem}
+.controls{display:flex;gap:0.8rem;align-items:center;flex-wrap:wrap;padding:0.6rem 0.9rem;background:var(--bg);border-left:3px solid var(--pink);margin-bottom:0.6rem;font-size:0.86rem}
+.controls label{font-family:'JetBrains Mono',monospace;font-size:0.74rem;color:var(--ink);text-transform:uppercase;letter-spacing:0.08em}
+.controls input[type=range]{accent-color:var(--ink)}
+.d-val{font-family:'JetBrains Mono',monospace;font-size:0.82rem;color:var(--ink);font-weight:700;min-width:3rem;display:inline-block}
+#curve{width:100%;height:380px}
+.tracker{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.6rem;padding:0.5rem 0.9rem;background:var(--bg);border-left:3px solid var(--ink);margin:0.4rem 0;font-family:'JetBrains Mono',monospace;font-size:0.86rem}
+.tracker .label{display:block;color:var(--muted);text-transform:uppercase;font-size:0.66rem;letter-spacing:0.1em;margin-bottom:0.15rem}
+.tracker .val{font-weight:700;font-size:1rem}
+.tracker .pink{color:var(--pink)}
+.note{margin-top:0.5rem;color:var(--muted);font-size:0.78rem;line-height:1.5}
+</style>
+</head>
+<body>
+<h1>Type M: exaggeration vs power</h1>
+<p class="lead">The exaggeration ratio is how much a significant win overstates the truth, $\mathbb{E}[\lvert\hat\Delta\rvert \mid \text{reject}] / \Delta$. It depends only on power. At high power the curve sits near $1$: winners report close to the true effect. As power falls the curve climbs steeply, past $2\times$ below 20% power. The dot tracks the current setting.</p>
+
+<div class="setup">
+<div><span class="label">model</span> $\hat\Delta \sim \mathcal{N}(\Delta, 1)$, reject when $\lvert\hat\Delta\rvert \gt 1.96$ (two-sided $\alpha = 5\%$)</div>
+<div style="margin-top:0.1rem;"><span class="label">vary</span> the true effect $\Delta$ moves power along the curve</div>
+</div>
+
+<div class="controls">
+  <label for="d">Δ (true effect, in SE)</label>
+  <input id="d" type="range" min="0.5" max="4" step="0.1" value="1" style="width:240px"/>
+  <span class="d-val" id="dVal">1.0</span>
+</div>
+
+<div class="tracker">
+<div><span class="label">power at current Δ</span><span class="val" id="power">-</span></div>
+<div><span class="label">exaggeration ratio</span><span class="val pink" id="exag">-</span></div>
+<div><span class="label">true effect Δ</span><span class="val" id="dtrue">-</span></div>
+</div>
+
+<div id="curve"></div>
+
+<p class="note">Reading. Pick a true effect; the model fixes power and the exaggeration ratio. The point is that the inflation is not a property of one experiment, it is a function of power. A 20%-power design exaggerates the effect of its winners by roughly $2\times$ regardless of the field or the metric.</p>
+
+<script>
+function Phi(x){return 0.5*(1+erf(x/Math.SQRT2))}
+function erf(x){const s=x<0?-1:1;x=Math.abs(x);const t=1/(1+0.3275911*x);const y=1-(((((1.061405429*t-1.453152027)*t)+1.421413741)*t-0.284496736)*t+0.254829592)*t*Math.exp(-x*x);return s*y}
+function phi(x){return Math.exp(-0.5*x*x)/Math.sqrt(2*Math.PI)}
+const C=1.96;
+function powerOf(d){return (1-Phi(C-d))+Phi(-C-d)}
+// E[|Zhat|*1{|Zhat|>C}] for Zhat~N(d,1), closed form, divided by power -> conditional mean
+function expAbsSig(d){
+  const up = d*(1-Phi(C-d)) + phi(C-d);
+  const lo = -d*Phi(-C-d) + phi(-C-d);
+  return up + lo;
+}
+function exagOf(d){const p=powerOf(d); return p>0 ? (expAbsSig(d)/p)/d : NaN}
+
+function draw(){
+  const dNow=parseFloat(document.getElementById('d').value);
+  document.getElementById('dVal').textContent=dNow.toFixed(1);
+  document.getElementById('power').textContent=(powerOf(dNow)*100).toFixed(0)+'%';
+  document.getElementById('exag').textContent=exagOf(dNow).toFixed(2)+'×';
+  document.getElementById('dtrue').textContent=dNow.toFixed(1);
+
+  const ds=[]; for(let d=0.2; d<=4.0; d+=0.04) ds.push(d);
+  const xs=ds.map(powerOf), ys=ds.map(exagOf);
+  const px=powerOf(dNow), py=exagOf(dNow);
+  Plotly.newPlot('curve', [
+    {x:xs, y:ys, mode:'lines', line:{color:'#1A1A1A', width:2.5}, hoverinfo:'skip'},
+    {x:[px], y:[py], mode:'markers', marker:{color:'#FF00FF', size:14}, hoverinfo:'skip'}
+  ], {
+    margin:{l:54,r:16,t:16,b:46},
+    xaxis:{title:'power', range:[0,1], tickformat:'.0%'},
+    yaxis:{title:'reported / true effect', range:[1,4]},
+    shapes:[
+      {type:'line', x0:0, x1:1, y0:1, y1:1, line:{color:'#AAAAAA', width:1, dash:'dot'}},
+      {type:'line', x0:px, x1:px, y0:1, y1:py, line:{color:'#FF00FF', width:1, dash:'dot'}}
+    ],
+    showlegend:false,
+    font:{family:'Inter, sans-serif'},
+    plot_bgcolor:'#fff', paper_bgcolor:'#fff'
+  }, {displayModeBar:false, responsive:true});
+}
+document.getElementById('d').addEventListener('input', draw);
+draw();
+</script>
+</body>
+</html>

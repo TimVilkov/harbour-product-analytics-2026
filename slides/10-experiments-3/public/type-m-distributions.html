@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>Type M: the winning tail of H₁</title>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]});"></script>
+<style>
+:root{--pink:#FF00FF;--ink:#1A1A1A;--muted:#6B6B6B;--bg:#FAFAFA;--red:#E5142B;--green:#1A8F4F}
+*{box-sizing:border-box}
+body{margin:0;font-family:'Inter',system-ui,-apple-system,sans-serif;color:var(--ink);background:#fff;padding:1.2rem 1.6rem;max-width:1100px;margin-inline:auto}
+h1{font-family:'Bricolage Grotesque','Inter',sans-serif;font-weight:800;font-size:1.5rem;letter-spacing:-0.02em;margin:0 0 0.3rem}
+p.lead{color:var(--muted);font-size:0.86rem;line-height:1.5;margin:0 0 0.7rem}
+.setup{background:var(--bg);border-left:3px solid var(--ink);padding:0.5rem 0.9rem;margin-bottom:0.6rem;font-size:0.82rem;line-height:1.5}
+.setup .label{font-family:'JetBrains Mono',monospace;font-size:0.66rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;margin-right:0.3rem}
+.controls{display:flex;gap:0.8rem;align-items:center;flex-wrap:wrap;padding:0.6rem 0.9rem;background:var(--bg);border-left:3px solid var(--pink);margin-bottom:0.6rem;font-size:0.86rem}
+.controls label{font-family:'JetBrains Mono',monospace;font-size:0.74rem;color:var(--ink);text-transform:uppercase;letter-spacing:0.08em}
+.controls select,.controls button{font-family:'Inter',sans-serif;font-size:0.86rem;padding:0.3rem 0.7rem;border:1.4px solid var(--ink);background:#fff;color:var(--ink);cursor:pointer}
+.controls input[type=range]{accent-color:var(--ink)}
+.controls button{background:var(--ink);color:#fff}
+.d-val{font-family:'JetBrains Mono',monospace;font-size:0.82rem;color:var(--ink);font-weight:700;min-width:3rem;display:inline-block}
+#dens{width:100%;height:262px}
+#hist{width:100%;height:240px}
+.tracker{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:0.6rem;padding:0.5rem 0.9rem;background:var(--bg);border-left:3px solid var(--ink);margin:0.4rem 0;font-family:'JetBrains Mono',monospace;font-size:0.86rem}
+.tracker .label{display:block;color:var(--muted);text-transform:uppercase;font-size:0.66rem;letter-spacing:0.1em;margin-bottom:0.15rem}
+.tracker .val{font-weight:700;font-size:1rem}
+.tracker .pink{color:var(--pink)}
+.note{margin-top:0.5rem;color:var(--muted);font-size:0.78rem;line-height:1.5}
+</style>
+</head>
+<body>
+<h1>Type M: the winning tail of H₁</h1>
+<p class="lead">Two distributions of the estimate $\hat\Delta$. Under $H_0$ there is no effect, $\hat\Delta \sim \mathcal{N}(0, 1)$, and the rejection threshold $\lvert\hat\Delta\rvert \gt 1.96$ is read off this curve (two-sided $\alpha = 5\%$). Under $H_1$ the true effect is $\Delta$, so $\hat\Delta \sim \mathcal{N}(\Delta, 1)$. Power is the share of the $H_1$ curve past the threshold, the pink tail. The average estimate inside that tail (dashed pink) sits to the right of $\Delta$: a win reports more than the truth.</p>
+
+<div class="setup">
+<div><span class="label">H₀</span> $\hat\Delta \sim \mathcal{N}(0, 1)$, defines the threshold $\lvert\hat\Delta\rvert \gt 1.96$</div>
+<div style="margin-top:0.1rem;"><span class="label">H₁</span> $\hat\Delta \sim \mathcal{N}(\Delta, 1)$, true effect $\Delta$ in units of SE</div>
+<div style="margin-top:0.1rem;"><span class="label">read</span> power $=$ pink tail of $H_1$; exaggeration $= \mathbb{E}[\lvert\hat\Delta\rvert \mid \text{reject}] / \Delta$</div>
+</div>
+
+<div class="controls">
+  <label for="d">Δ (true effect, in SE)</label>
+  <input id="d" type="range" min="0.5" max="4" step="0.1" value="1" style="width:200px"/>
+  <span class="d-val" id="dVal">1.0</span>
+  <label for="reps">draws under H₁</label>
+  <select id="reps">
+    <option>2000</option>
+    <option selected>10000</option>
+    <option>40000</option>
+  </select>
+  <button id="run">Run again</button>
+</div>
+
+<div class="tracker">
+<div><span class="label">power</span><span class="val" id="power">-</span></div>
+<div><span class="label">mean est | reject</span><span class="val pink" id="msig">-</span></div>
+<div><span class="label">exaggeration ratio</span><span class="val pink" id="exag">-</span></div>
+<div><span class="label">true effect Δ</span><span class="val" id="dtrue">-</span></div>
+</div>
+
+<div id="dens"></div>
+<div id="hist"></div>
+
+<p class="note">Top: the two theoretical densities. Grey $H_0$ sets the threshold (its tails are the $\alpha$ region); black $H_1$ is the truth. The pink tail of $H_1$ past the threshold is the winners, and its mean (dashed pink) is to the right of the solid $\Delta$ line. Bottom: a Monte Carlo draw under $H_1$, bars in the rejection region in pink. At low power only the inflated upper tail of $H_1$ crosses the line.</p>
+
+<script>
+function randn(){let u=0,v=0;while(u===0)u=Math.random();while(v===0)v=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v)}
+function phi(x){return Math.exp(-0.5*x*x)/Math.sqrt(2*Math.PI)}
+const C=1.96;
+
+function drawDensities(d, condMean){
+  const xmin=-4, xmax=Math.max(4, d+4);
+  const xs=[]; for(let x=xmin;x<=xmax;x+=0.05) xs.push(x);
+  const y0=xs.map(x=>phi(x));        // H0
+  const y1=xs.map(x=>phi(x-d));      // H1
+  // pink right tail of H1 (x>C)
+  const xr=xs.filter(x=>x>=C); const yr=xr.map(x=>phi(x-d));
+  // pink left tail of H1 (x<-C)
+  const xl=xs.filter(x=>x<=-C); const yl=xl.map(x=>phi(x-d));
+  // light grey alpha tails of H0
+  const xa1=xs.filter(x=>x>=C); const ya1=xa1.map(x=>phi(x));
+  const xa2=xs.filter(x=>x<=-C); const ya2=xa2.map(x=>phi(x));
+
+  Plotly.newPlot('dens', [
+    {x:xa1, y:ya1, fill:'tozeroy', line:{width:0}, fillcolor:'rgba(107,107,107,0.18)', hoverinfo:'skip', showlegend:false},
+    {x:xa2, y:ya2, fill:'tozeroy', line:{width:0}, fillcolor:'rgba(107,107,107,0.18)', hoverinfo:'skip', showlegend:false},
+    {x:xr, y:yr, fill:'tozeroy', line:{width:0}, fillcolor:'rgba(255,0,255,0.28)', hoverinfo:'skip', showlegend:false},
+    {x:xl, y:yl, fill:'tozeroy', line:{width:0}, fillcolor:'rgba(255,0,255,0.28)', hoverinfo:'skip', showlegend:false},
+    {x:xs, y:y0, mode:'lines', line:{color:'#6B6B6B', width:2}, name:'H₀: N(0,1)', hoverinfo:'skip'},
+    {x:xs, y:y1, mode:'lines', line:{color:'#1A1A1A', width:2.5}, name:'H₁: N(Δ,1)', hoverinfo:'skip'},
+  ], {
+    margin:{l:40,r:14,t:24,b:24},
+    title:{text:'Two distributions of the estimate', font:{size:13, family:'Inter, sans-serif'}},
+    xaxis:{range:[xmin,xmax], zeroline:false},
+    yaxis:{title:'density', rangemode:'tozero', showticklabels:false},
+    legend:{x:0.74,y:1,bgcolor:'rgba(255,255,255,0.7)'},
+    shapes:[
+      {type:'line', x0:C, x1:C, y0:0, y1:1, yref:'paper', line:{color:'#6B6B6B', width:1.4, dash:'dot'}},
+      {type:'line', x0:-C, x1:-C, y0:0, y1:1, yref:'paper', line:{color:'#6B6B6B', width:1.4, dash:'dot'}},
+      {type:'line', x0:d, x1:d, y0:0, y1:1, yref:'paper', line:{color:'#1A1A1A', width:2}},
+      {type:'line', x0:condMean, x1:condMean, y0:0, y1:1, yref:'paper', line:{color:'#FF00FF', width:2, dash:'dash'}}
+    ],
+    annotations:[
+      {x:d, y:1.04, yref:'paper', text:'Δ', showarrow:false, font:{color:'#1A1A1A', size:13}},
+      {x:condMean, y:1.04, yref:'paper', text:'reported', showarrow:false, font:{color:'#FF00FF', size:12}},
+      {x:C, y:-0.08, yref:'paper', text:'1.96', showarrow:false, font:{color:'#6B6B6B', size:10}}
+    ],
+    font:{family:'Inter, sans-serif'},
+    plot_bgcolor:'#fff', paper_bgcolor:'#fff'
+  }, {displayModeBar:false, responsive:true});
+}
+
+function run(){
+  const d = parseFloat(document.getElementById('d').value);
+  const reps = parseInt(document.getElementById('reps').value);
+  document.getElementById('dVal').textContent = d.toFixed(1);
+
+  let all=[], sig=[];
+  for(let r=0;r<reps;r++){
+    const est = d + randn();
+    all.push(est);
+    if(Math.abs(est) > C) sig.push(est);
+  }
+  const power = sig.length/reps;
+  const meanAbsSig = sig.length ? sig.reduce((s,x)=>s+Math.abs(x),0)/sig.length : d;
+
+  document.getElementById('power').textContent = (power*100).toFixed(0)+'%';
+  document.getElementById('msig').textContent = meanAbsSig.toFixed(2);
+  document.getElementById('exag').textContent = (meanAbsSig/d).toFixed(2)+'×';
+  document.getElementById('dtrue').textContent = d.toFixed(1);
+
+  // bottom histogram of H1 draws, shared bins
+  const xmin=-4, xmax=Math.max(4, d+4);
+  const bins=60, w=(xmax-xmin)/bins;
+  const centers=Array.from({length:bins},(_,i)=>xmin+(i+0.5)*w);
+  const counts=new Array(bins).fill(0);
+  for(const v of all){const k=Math.floor((v-xmin)/w); if(k>=0&&k<bins) counts[k]++;}
+  const dens=counts.map(c=>c/(reps*w));
+  const colors=centers.map(c=>Math.abs(c)>C ? '#FF00FF' : '#6B6B6B');
+
+  Plotly.newPlot('hist', [
+    {x:centers, y:dens, type:'bar', marker:{color:colors}, opacity:0.8, hoverinfo:'skip', showlegend:false}
+  ], {
+    margin:{l:40,r:14,t:24,b:34},
+    title:{text:'Simulated estimates under H₁', font:{size:13, family:'Inter, sans-serif'}},
+    bargap:0.02,
+    xaxis:{range:[xmin,xmax], title:'estimated effect', zeroline:false},
+    yaxis:{title:'density', rangemode:'tozero', showticklabels:false},
+    shapes:[
+      {type:'line', x0:C, x1:C, y0:0, y1:1, yref:'paper', line:{color:'#6B6B6B', width:1.4, dash:'dot'}},
+      {type:'line', x0:-C, x1:-C, y0:0, y1:1, yref:'paper', line:{color:'#6B6B6B', width:1.4, dash:'dot'}},
+      {type:'line', x0:d, x1:d, y0:0, y1:1, yref:'paper', line:{color:'#1A1A1A', width:2}},
+      {type:'line', x0:meanAbsSig, x1:meanAbsSig, y0:0, y1:1, yref:'paper', line:{color:'#FF00FF', width:2, dash:'dash'}}
+    ],
+    font:{family:'Inter, sans-serif'},
+    plot_bgcolor:'#fff', paper_bgcolor:'#fff'
+  }, {displayModeBar:false, responsive:true});
+
+  drawDensities(d, meanAbsSig);
+}
+
+document.getElementById('run').addEventListener('click', run);
+document.getElementById('d').addEventListener('input', run);
+document.getElementById('reps').addEventListener('change', run);
+run();
+</script>
+</body>
+</html>

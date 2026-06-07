@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>LLN simulation</title>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]});"></script>
+<style>
+:root{--pink:#FF00FF;--ink:#1A1A1A;--muted:#6B6B6B;--bg:#FAFAFA}
+*{box-sizing:border-box}
+body{margin:0;font-family:'Inter',system-ui,-apple-system,sans-serif;color:var(--ink);background:#fff;padding:2rem 2.5rem;max-width:1100px;margin-inline:auto}
+h1{font-family:'Bricolage Grotesque','Inter',sans-serif;font-weight:800;font-size:2.2rem;letter-spacing:-0.02em;margin:0 0 0.4rem}
+p.lead{color:var(--muted);font-size:1rem;line-height:1.5;margin:0 0 1.2rem;max-width:48rem}
+.controls{display:flex;gap:1rem;align-items:center;flex-wrap:wrap;padding:0.8rem 1rem;background:var(--bg);border-left:3px solid var(--pink);margin-bottom:1rem;font-size:0.95rem}
+.controls label{font-family:'JetBrains Mono',monospace;font-size:0.85rem;color:var(--ink);text-transform:uppercase;letter-spacing:0.08em}
+.controls select,.controls button,.controls input{font-family:'Inter',sans-serif;font-size:0.95rem;padding:0.4rem 0.8rem;border:1.4px solid var(--ink);background:#fff;color:var(--ink);cursor:pointer}
+.controls button{background:var(--ink);color:#fff}
+.controls button:hover{background:var(--pink)}
+.info{font-family:'JetBrains Mono',monospace;font-size:0.85rem;color:var(--muted);margin-left:auto}
+#chart{width:100%;height:520px}
+.note{margin-top:0.6rem;color:var(--muted);font-size:0.85rem;line-height:1.5}
+.pink{color:var(--pink);font-weight:700}
+</style>
+</head>
+<body>
+<h1>Law of large numbers</h1>
+<p class="lead">As we draw more samples, the running mean $\bar X_n$ stabilises around the true mean $\mu$. Five independent paths are shown — they all converge to the same horizontal line.</p>
+
+<div class="controls">
+  <label for="dist">source</label>
+  <select id="dist">
+    <option value="bernoulli">Bernoulli(0.3)</option>
+    <option value="uniform" selected>Uniform(0, 1)</option>
+    <option value="exponential">Exponential(1)</option>
+    <option value="normal">Normal(0, 1)</option>
+  </select>
+  <label for="n">n</label>
+  <input id="n" type="number" value="10000" min="100" max="100000" step="100" style="width:7rem"/>
+  <button id="run">Run</button>
+  <span class="info">μ = <span id="muval">—</span></span>
+</div>
+
+<div id="chart"></div>
+
+<p class="note">Try the Bernoulli source for a noisy start that settles slowly, and the Normal source for fast stabilisation. The line in <span class="pink">pink</span> marks the true μ.</p>
+
+<script>
+const distFns = {
+  bernoulli: { sample: () => Math.random() < 0.3 ? 1 : 0, mu: 0.3 },
+  uniform:   { sample: () => Math.random(), mu: 0.5 },
+  exponential: { sample: () => -Math.log(1 - Math.random()), mu: 1 },
+  normal: {
+    sample: () => {
+      const u = 1 - Math.random(), v = Math.random();
+      return Math.sqrt(-2*Math.log(u)) * Math.cos(2*Math.PI*v);
+    },
+    mu: 0
+  }
+};
+
+function runSim() {
+  const distKey = document.getElementById('dist').value;
+  const n = Math.max(100, Math.min(100000, parseInt(document.getElementById('n').value)));
+  const { sample, mu } = distFns[distKey];
+  document.getElementById('muval').textContent = mu;
+
+  const paths = 5;
+  const xs = [];
+  for (let i = 1; i <= n; i++) xs.push(i);
+
+  const traces = [];
+  for (let p = 0; p < paths; p++) {
+    let runningSum = 0;
+    const ys = new Array(n);
+    for (let i = 0; i < n; i++) {
+      runningSum += sample();
+      ys[i] = runningSum / (i + 1);
+    }
+    traces.push({
+      x: xs, y: ys, mode: 'lines', type: 'scattergl',
+      line: { color: ['#1A1A1A','#444','#666','#888','#AAA'][p], width: 1.2 },
+      hoverinfo: 'skip', showlegend: false
+    });
+  }
+  traces.push({
+    x: [1, n], y: [mu, mu], mode: 'lines',
+    line: { color: '#FF00FF', width: 2, dash: 'dash' },
+    name: 'μ', hoverinfo: 'skip'
+  });
+
+  const layout = {
+    xaxis: { type: 'log', title: 'n', gridcolor: '#EEE', zerolinecolor: '#CCC' },
+    yaxis: { title: 'running mean X̄ₙ', gridcolor: '#EEE', zerolinecolor: '#CCC' },
+    paper_bgcolor: '#fff', plot_bgcolor: '#FAFAFA',
+    margin: { l: 60, r: 30, t: 20, b: 50 },
+    font: { family: 'Inter, sans-serif', color: '#1A1A1A' },
+    showlegend: true,
+    legend: { x: 1, y: 1, xanchor: 'right', bgcolor: 'rgba(255,255,255,0.85)' }
+  };
+
+  Plotly.react('chart', traces, layout, { responsive: true, displaylogo: false });
+}
+
+document.getElementById('run').addEventListener('click', runSim);
+document.getElementById('dist').addEventListener('change', runSim);
+runSim();
+</script>
+</body>
+</html>

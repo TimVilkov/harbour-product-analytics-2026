@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>Randomization and balance</title>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]});"></script>
+<style>
+:root{--pink:#FF00FF;--ink:#1A1A1A;--muted:#6B6B6B;--bg:#FAFAFA;--red:#E5142B;--green:#1A8F4F;--blue:#1F77B4;--orange:#E08020}
+*{box-sizing:border-box}
+body{margin:0;font-family:'Inter',system-ui,-apple-system,sans-serif;color:var(--ink);background:#fff;padding:2rem 2.5rem;max-width:1180px;margin-inline:auto}
+h1{font-family:'Bricolage Grotesque','Inter',sans-serif;font-weight:800;font-size:2.2rem;letter-spacing:-0.02em;margin:0 0 0.4rem}
+p.lead{color:var(--muted);font-size:1rem;line-height:1.55;margin:0 0 1.2rem;max-width:62rem}
+.setup{background:var(--bg);border-left:3px solid var(--ink);padding:0.7rem 1rem;margin-bottom:1rem;font-size:0.92rem;line-height:1.55}
+.setup .label{font-family:'JetBrains Mono',monospace;font-size:0.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;margin-right:0.4rem}
+.controls{display:flex;gap:1rem;align-items:center;flex-wrap:wrap;padding:0.8rem 1rem;background:var(--bg);border-left:3px solid var(--pink);margin-bottom:1.2rem;font-size:0.95rem}
+.controls label{font-family:'JetBrains Mono',monospace;font-size:0.85rem;color:var(--ink);text-transform:uppercase;letter-spacing:0.08em}
+.controls select,.controls button{font-family:'Inter',sans-serif;font-size:0.95rem;padding:0.4rem 0.8rem;border:1.4px solid var(--ink);background:#fff;color:var(--ink);cursor:pointer}
+.controls button{background:var(--ink);color:#fff}
+.controls button:hover{background:var(--pink)}
+
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:0.9rem}
+.panel{border:1.4px solid #D8D8D8;background:#FFFFFF;padding:0.45rem 0.55rem;border-radius:2px}
+.panel.ok{border-color:rgba(26,143,79,0.45)}
+.panel.bad{border-color:rgba(229,20,43,0.55);background:#FFF6F8}
+.panel-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:0.15rem}
+.panel-title{font-family:'JetBrains Mono',monospace;font-size:0.72rem;color:var(--ink);text-transform:uppercase;letter-spacing:0.1em;font-weight:700}
+.panel-diff{font-family:'JetBrains Mono',monospace;font-size:0.74rem;color:var(--muted)}
+.panel-diff.ok{color:var(--green);font-weight:700}
+.panel-diff.bad{color:var(--red);font-weight:700}
+.panel .chart{width:100%;height:140px}
+
+.legend{display:flex;gap:1rem;align-items:center;margin:0.4rem 0 1rem 0;font-size:0.85rem;color:var(--muted)}
+.legend .swatch{display:inline-block;width:14px;height:14px;margin-right:0.4rem;vertical-align:middle;border-radius:2px}
+.legend .a{background:rgba(31,119,180,0.65)}
+.legend .b{background:rgba(224,128,32,0.65)}
+
+.note{margin-top:1rem;color:var(--muted);font-size:0.88rem;line-height:1.55}
+.pink{color:var(--pink);font-weight:700}
+.red{color:var(--red);font-weight:700}
+.green{color:var(--green);font-weight:700}
+</style>
+</head>
+<body>
+<h1>Randomization and balance, across many covariates</h1>
+<p class="lead">Each user carries six attributes: age, income, tenure, activity, country, device. We sample $n$ users and split into group A and B. With a <strong>random</strong> splitter, every attribute balances as $n$ grows. With a <strong>biased</strong> splitter (sort by income), the income panel splits cleanly, age also drifts because it correlates with income, and the rest stay balanced. The lesson: randomization handles attributes we forgot about; a broken splitter does not.</p>
+
+<div class="setup">
+<div><span class="label">population</span> 50,000 users with six attributes. Age $\sim \mathcal{N}(35, 10)$, income depends on age (correlated), tenure $\sim$ Exp, activity $\sim$ Beta, country and device categorical</div>
+<div style="margin-top:0.2rem;"><span class="label">random splitter</span> bucket independent of every attribute</div>
+<div style="margin-top:0.2rem;"><span class="label">biased splitter</span> sort by income, top half $\to$ A, bottom half $\to$ B</div>
+</div>
+
+<div class="controls">
+  <label for="n">n</label>
+  <select id="n">
+    <option>50</option>
+    <option>200</option>
+    <option selected>1000</option>
+    <option>5000</option>
+    <option>20000</option>
+  </select>
+  <label for="splitter">splitter</label>
+  <select id="splitter">
+    <option value="random" selected>random</option>
+    <option value="biased">biased (sort by income)</option>
+  </select>
+  <button id="resample">Resample</button>
+</div>
+
+<div class="legend">
+  <span><span class="swatch a"></span>group A</span>
+  <span><span class="swatch b"></span>group B</span>
+  <span style="margin-left:auto;">panel turns <span class="red">red</span> when the gap exceeds 5% of the pooled mean (for continuous) or 5pp (for categorical)</span>
+</div>
+
+<div class="grid">
+  <div class="panel" id="panel-age"><div class="panel-head"><span class="panel-title">age</span><span class="panel-diff" id="diff-age">—</span></div><div class="chart" id="chart-age"></div></div>
+  <div class="panel" id="panel-income"><div class="panel-head"><span class="panel-title">income</span><span class="panel-diff" id="diff-income">—</span></div><div class="chart" id="chart-income"></div></div>
+  <div class="panel" id="panel-tenure"><div class="panel-head"><span class="panel-title">tenure (days)</span><span class="panel-diff" id="diff-tenure">—</span></div><div class="chart" id="chart-tenure"></div></div>
+  <div class="panel" id="panel-activity"><div class="panel-head"><span class="panel-title">activity score</span><span class="panel-diff" id="diff-activity">—</span></div><div class="chart" id="chart-activity"></div></div>
+  <div class="panel" id="panel-country"><div class="panel-head"><span class="panel-title">country</span><span class="panel-diff" id="diff-country">—</span></div><div class="chart" id="chart-country"></div></div>
+  <div class="panel" id="panel-device"><div class="panel-head"><span class="panel-title">device</span><span class="panel-diff" id="diff-device">—</span></div><div class="chart" id="chart-device"></div></div>
+</div>
+
+<p class="note">Walk the slider with <strong>random</strong>: at $n = 50$ noticeable noise across panels. At $n = 1000$ all six panels overlap. Switch to <strong>biased</strong>: income panel splits cleanly into two non-overlapping halves, age shows a residual drift because age and income are correlated, country / device / tenure / activity stay balanced because the bias did not touch them directly. Randomization handles attributes we did not even know to check.</p>
+
+<script>
+function rnorm() {
+  const u = 1 - Math.random(), v = Math.random();
+  return Math.sqrt(-2*Math.log(u)) * Math.cos(2*Math.PI*v);
+}
+function rexp(mean) { return -mean * Math.log(1 - Math.random()); }
+function rbeta(a, b) {
+  // Crude beta via sum of two gammas; we just want a [0,1] hump-shape, not exact
+  let x = 0, y = 0;
+  for (let i = 0; i < 8; i++) x += Math.random();
+  for (let i = 0; i < 8; i++) y += Math.random();
+  return x / (x + y);
+}
+function rchoice(items, weights) {
+  const total = weights.reduce((s, w) => s + w, 0);
+  let r = Math.random() * total;
+  for (let i = 0; i < items.length; i++) {
+    r -= weights[i];
+    if (r <= 0) return items[i];
+  }
+  return items[items.length - 1];
+}
+
+const POP_SIZE = 50000;
+const COUNTRIES = ['US', 'EU', 'LATAM', 'APAC', 'Other'];
+const DEVICES = ['Mobile', 'Web'];
+
+const population = [];
+for (let i = 0; i < POP_SIZE; i++) {
+  let age = 35 + 10 * rnorm();
+  age = Math.max(18, Math.min(75, age));
+  const ageZ = (age - 35) / 10;
+  // income correlated with age: older → higher income on average
+  const incomeLog = 2.6 + 0.18 * ageZ + 0.75 * rnorm();
+  const income = Math.exp(incomeLog) * 1000; // scale to thousands of $
+  const tenure = rexp(400);
+  const activity = rbeta(2, 3) * 100; // mean ~40
+  const country = rchoice(COUNTRIES, [0.32, 0.28, 0.14, 0.18, 0.08]);
+  const device = rchoice(DEVICES, [0.7, 0.3]);
+  population.push({ age, income, tenure, activity, country, device });
+}
+
+function sample(arr, n) {
+  const idx = Array.from({length: arr.length}, (_, i) => i);
+  for (let i = idx.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [idx[i], idx[j]] = [idx[j], idx[i]];
+  }
+  return idx.slice(0, n).map(i => arr[i]);
+}
+
+function splitGroups(users, splitter) {
+  const A = [], B = [];
+  if (splitter === 'random') {
+    for (const u of users) {
+      if (Math.random() < 0.5) A.push(u); else B.push(u);
+    }
+  } else {
+    const sorted = [...users].sort((a, b) => b.income - a.income);
+    const mid = Math.floor(sorted.length / 2);
+    for (let i = 0; i < sorted.length; i++) {
+      if (i < mid) A.push(sorted[i]); else B.push(sorted[i]);
+    }
+  }
+  return { A, B };
+}
+
+function mean(arr, key) {
+  if (arr.length === 0) return 0;
+  let s = 0;
+  for (const u of arr) s += u[key];
+  return s / arr.length;
+}
+
+function histogram(values, binStart, binSize, numBins, n) {
+  const counts = new Array(numBins).fill(0);
+  for (const v of values) {
+    if (v < binStart) continue;
+    const idx = Math.floor((v - binStart) / binSize);
+    if (idx >= 0 && idx < numBins) counts[idx]++;
+  }
+  const centers = [], densities = [];
+  const total = Math.max(1, n);
+  for (let i = 0; i < numBins; i++) {
+    centers.push(binStart + (i + 0.5) * binSize);
+    densities.push(counts[i] / (total * binSize));
+  }
+  return { centers, densities };
+}
+
+function categoricalShare(arr, key, categories) {
+  const counts = {};
+  for (const c of categories) counts[c] = 0;
+  for (const u of arr) counts[u[key]] = (counts[u[key]] || 0) + 1;
+  const n = Math.max(1, arr.length);
+  return categories.map(c => counts[c] / n);
+}
+
+function fmt(num, decimals=1) { return num.toFixed(decimals); }
+
+function drawContinuousPanel(panelId, chartId, diffId, A, B, key, binStart, binSize, numBins, unitLabel, decimals=1) {
+  const aVals = A.map(u => u[key]);
+  const bVals = B.map(u => u[key]);
+  const hA = histogram(aVals, binStart, binSize, numBins, aVals.length);
+  const hB = histogram(bVals, binStart, binSize, numBins, bVals.length);
+  const mA = mean(A, key), mB = mean(B, key);
+  const pooled = mean(A.concat(B), key);
+  const relDiff = pooled > 0 ? Math.abs(mA - mB) / pooled : 0;
+
+  const traces = [
+    { x: hA.centers, y: hA.densities, type: 'bar', marker: { color: 'rgba(31,119,180,0.55)' }, width: binSize * 0.95, hoverinfo: 'skip', showlegend: false },
+    { x: hB.centers, y: hB.densities, type: 'bar', marker: { color: 'rgba(224,128,32,0.55)' }, width: binSize * 0.95, hoverinfo: 'skip', showlegend: false }
+  ];
+  const layout = {
+    paper_bgcolor: '#fff', plot_bgcolor: '#FAFAFA',
+    margin: { l: 28, r: 6, t: 4, b: 22 },
+    xaxis: { gridcolor: '#EEE', zerolinecolor: '#CCC', tickfont: { size: 9 } },
+    yaxis: { showticklabels: false, gridcolor: '#EEE', autorange: true },
+    font: { family: 'Inter, sans-serif', color: '#1A1A1A', size: 10 },
+    showlegend: false,
+    barmode: 'overlay'
+  };
+  Plotly.react(chartId, traces, layout, { responsive: true, displaylogo: false, staticPlot: true });
+
+  const panel = document.getElementById(panelId);
+  const diff = document.getElementById(diffId);
+  panel.classList.remove('ok', 'bad');
+  diff.classList.remove('ok', 'bad');
+  if (relDiff < 0.05) {
+    panel.classList.add('ok');
+    diff.classList.add('ok');
+  } else {
+    panel.classList.add('bad');
+    diff.classList.add('bad');
+  }
+  diff.textContent = `Δ ${(relDiff * 100).toFixed(1)}% (A ${fmt(mA, decimals)} ${unitLabel} · B ${fmt(mB, decimals)} ${unitLabel})`;
+}
+
+function drawCategoricalPanel(panelId, chartId, diffId, A, B, key, categories) {
+  const sA = categoricalShare(A, key, categories);
+  const sB = categoricalShare(B, key, categories);
+  let maxAbsDiff = 0;
+  for (let i = 0; i < categories.length; i++) {
+    maxAbsDiff = Math.max(maxAbsDiff, Math.abs(sA[i] - sB[i]));
+  }
+
+  const traces = [
+    { x: categories, y: sA, type: 'bar', marker: { color: 'rgba(31,119,180,0.65)' }, hoverinfo: 'skip', showlegend: false },
+    { x: categories, y: sB, type: 'bar', marker: { color: 'rgba(224,128,32,0.65)' }, hoverinfo: 'skip', showlegend: false }
+  ];
+  const layout = {
+    paper_bgcolor: '#fff', plot_bgcolor: '#FAFAFA',
+    margin: { l: 28, r: 6, t: 4, b: 22 },
+    xaxis: { gridcolor: '#EEE', zerolinecolor: '#CCC', tickfont: { size: 9 } },
+    yaxis: { tickformat: ',.0%', gridcolor: '#EEE', range: [0, Math.max(0.6, Math.max(...sA.concat(sB)) * 1.2)], tickfont: { size: 9 } },
+    font: { family: 'Inter, sans-serif', color: '#1A1A1A', size: 10 },
+    showlegend: false,
+    barmode: 'group',
+    bargap: 0.15
+  };
+  Plotly.react(chartId, traces, layout, { responsive: true, displaylogo: false, staticPlot: true });
+
+  const panel = document.getElementById(panelId);
+  const diff = document.getElementById(diffId);
+  panel.classList.remove('ok', 'bad');
+  diff.classList.remove('ok', 'bad');
+  if (maxAbsDiff < 0.05) {
+    panel.classList.add('ok');
+    diff.classList.add('ok');
+  } else {
+    panel.classList.add('bad');
+    diff.classList.add('bad');
+  }
+  diff.textContent = `max Δ ${(maxAbsDiff * 100).toFixed(1)}pp`;
+}
+
+let lastSample = null;
+let lastN = null;
+
+function redraw() {
+  const n = parseInt(document.getElementById('n').value);
+  const splitter = document.getElementById('splitter').value;
+  if (lastSample === null || lastN !== n) {
+    lastSample = sample(population, n);
+    lastN = n;
+  }
+  const { A, B } = splitGroups(lastSample, splitter);
+  drawContinuousPanel('panel-age', 'chart-age', 'diff-age', A, B, 'age', 18, 2, 30, 'yr', 1);
+  drawContinuousPanel('panel-income', 'chart-income', 'diff-income', A, B, 'income', 0, 5000, 40, '$', 0);
+  drawContinuousPanel('panel-tenure', 'chart-tenure', 'diff-tenure', A, B, 'tenure', 0, 80, 28, 'd', 0);
+  drawContinuousPanel('panel-activity', 'chart-activity', 'diff-activity', A, B, 'activity', 0, 4, 25, '', 1);
+  drawCategoricalPanel('panel-country', 'chart-country', 'diff-country', A, B, 'country', COUNTRIES);
+  drawCategoricalPanel('panel-device', 'chart-device', 'diff-device', A, B, 'device', DEVICES);
+}
+
+document.getElementById('n').addEventListener('change', () => { lastSample = null; redraw(); });
+document.getElementById('splitter').addEventListener('change', redraw);
+document.getElementById('resample').addEventListener('click', () => { lastSample = null; redraw(); });
+
+redraw();
+</script>
+</body>
+</html>

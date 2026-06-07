@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js" charset="utf-8"></script>
+<style>
+  html, body { margin: 0; padding: 0; font-family: 'Inter', system-ui, sans-serif; background: #FFFFFF; color: #1A1A1A; }
+  .controls { padding: 8px 14px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; border-bottom: 1px solid #E0E0E0; }
+  .group { display: flex; align-items: center; gap: 6px; }
+  .controls label { font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.14em; color: #6B6B6B; }
+  button { font-family: 'JetBrains Mono', monospace; font-size: 0.74rem; padding: 5px 10px; border: 1px solid #1A1A1A; background: #FFFFFF; color: #1A1A1A; cursor: pointer; letter-spacing: 0.06em; }
+  button:hover { background: #1A1A1A; color: #FFFFFF; }
+  button.active { background: #FF00FF; color: #FFFFFF; border-color: #FF00FF; }
+  #plot { width: 100%; height: 100%; min-height: 200px; }
+</style>
+</head>
+<body>
+
+<div class="controls">
+
+  <div class="group">
+    <label>Source</label>
+    <button data-dist="bernoulli" class="dist active" onclick="setDist('bernoulli')">conversion (Bernoulli)</button>
+    <button data-dist="exp"        class="dist"        onclick="setDist('exp')">revenue (skewed)</button>
+    <button data-dist="uniform"    class="dist"        onclick="setDist('uniform')">uniform</button>
+  </div>
+
+  <div class="group">
+    <label>Sample size n</label>
+    <button data-n="5"     class="nbtn"        onclick="setN(5)">5</button>
+    <button data-n="30"    class="nbtn active" onclick="setN(30)">30</button>
+    <button data-n="500"   class="nbtn"        onclick="setN(500)">500</button>
+    <button data-n="10000" class="nbtn"        onclick="setN(10000)">10000</button>
+  </div>
+
+  <button onclick="run()">Run again</button>
+
+</div>
+
+<div id="plot"></div>
+
+<script>
+let currentDist = 'bernoulli';
+let currentN = 30;
+
+const distributions = {
+  bernoulli: {
+    sample: () => (Math.random() < 0.30 ? 1 : 0),
+    label: 'Bernoulli(0.30)',
+    populationMean: 0.30,
+    xRange: [0, 1]
+  },
+  exp: {
+    sample: () => -Math.log(1 - Math.random()) * 50,
+    label: 'Exponential, mean=50',
+    populationMean: 50,
+    xRange: [0, 200]
+  },
+  uniform: {
+    sample: () => Math.random(),
+    label: 'Uniform[0, 1]',
+    populationMean: 0.5,
+    xRange: [0, 1]
+  }
+};
+
+function setDist(name) {
+  currentDist = name;
+  document.querySelectorAll('.dist').forEach(b => b.classList.toggle('active', b.dataset.dist === name));
+  run();
+}
+function setN(n) {
+  currentN = n;
+  document.querySelectorAll('.nbtn').forEach(b => b.classList.toggle('active', parseInt(b.dataset.n) === n));
+  run();
+}
+
+function run() {
+  const d = distributions[currentDist];
+  // Reduce numSamples for very large n to keep responsive
+  const numSamples = currentN >= 10000 ? 800 : 3000;
+  const means = new Array(numSamples);
+  for (let i = 0; i < numSamples; i++) {
+    let s = 0;
+    for (let j = 0; j < currentN; j++) s += d.sample();
+    means[i] = s / currentN;
+  }
+
+  Plotly.newPlot('plot', [{
+    x: means,
+    type: 'histogram',
+    marker: { color: '#1A1A1A' },
+    nbinsx: 50,
+    name: 'sample means'
+  }], {
+    margin: { l: 50, r: 20, t: 18, b: 45 },
+    xaxis: { title: 'sample mean value', gridcolor: '#EEEEEE', range: d.xRange, fixedrange: true },
+    yaxis: { title: 'frequency', gridcolor: '#EEEEEE' },
+    plot_bgcolor: '#FAFAFA',
+    paper_bgcolor: '#FFFFFF',
+    showlegend: false,
+    shapes: [{
+      type: 'line',
+      x0: d.populationMean, x1: d.populationMean,
+      yref: 'paper', y0: 0, y1: 1,
+      line: { color: '#FF00FF', dash: 'dash', width: 1.6 }
+    }],
+    annotations: [{
+      x: d.populationMean, yref: 'paper', y: 1.04,
+      text: 'population mean = ' + d.populationMean,
+      showarrow: false,
+      font: { color: '#FF00FF', size: 11, family: 'JetBrains Mono' }
+    }],
+    font: { family: 'Inter, system-ui, sans-serif', size: 12, color: '#1A1A1A' }
+  }, { displayModeBar: false, responsive: true });
+}
+
+run();
+</script>
+
+</body>
+</html>

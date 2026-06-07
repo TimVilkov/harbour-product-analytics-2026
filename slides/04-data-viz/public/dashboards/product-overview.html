@@ -1,0 +1,327 @@
+<!doctype html>
+<html><head>
+<meta charset="utf-8">
+<title>Product overview · demo dashboard</title>
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #1A1A1A;
+    --muted: #6B6B6B;
+    --hairline: #E5E5E5;
+    --bg: #F5F5F7;
+    --pink: #FF00FF;
+    --good: #2A8C5A;
+    --bad: #C0392B;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { font-family: 'Inter', -apple-system, system-ui, sans-serif;
+         color: var(--ink); background: var(--bg); padding: 16px 18px; }
+  header { display: flex; align-items: baseline; justify-content: space-between;
+           padding-bottom: 10px; margin-bottom: 14px;
+           border-bottom: 1px solid var(--ink); }
+  header .left h1 { font-family: 'Bricolage Grotesque', sans-serif;
+                    font-size: 20px; margin: 0; font-weight: 800;
+                    letter-spacing: -0.01em; }
+  header .left .sub { font-family: 'JetBrains Mono', monospace; font-size: 10px;
+                      color: var(--muted); text-transform: uppercase;
+                      letter-spacing: 0.12em; margin-top: 3px; }
+  header .right { display: flex; gap: 6px; }
+  .chip { font-family: 'JetBrains Mono', monospace; font-size: 10px;
+          padding: 5px 11px; background: white; border: 1px solid var(--hairline);
+          border-radius: 999px; color: var(--ink); cursor: pointer;
+          text-transform: uppercase; letter-spacing: 0.1em;
+          transition: all 0.15s ease; }
+  .chip:hover { border-color: var(--ink); }
+  .chip.active { background: var(--ink); color: white; border-color: var(--ink); }
+
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .tile { background: white; border: 1px solid var(--hairline); border-radius: 10px;
+          padding: 14px 16px; transition: border-color 0.15s ease; }
+  .tile:hover { border-color: #BBBBBB; }
+  .tile .label { font-family: 'JetBrains Mono', monospace; font-size: 10px;
+                 color: var(--muted); text-transform: uppercase;
+                 letter-spacing: 0.12em; margin-bottom: 6px; }
+  .tile .value { font-family: 'Bricolage Grotesque', sans-serif; font-size: 28px;
+                 font-weight: 800; letter-spacing: -0.02em; line-height: 1.05; }
+  .tile .delta { font-family: 'JetBrains Mono', monospace; font-size: 10px;
+                 color: var(--good); margin-top: 4px;
+                 letter-spacing: 0.05em; }
+  .tile .delta.bad { color: var(--bad); }
+
+  .card { background: white; border: 1px solid var(--hairline); border-radius: 10px;
+          padding: 12px 14px; }
+  .card .head { display: flex; align-items: baseline; justify-content: space-between;
+                margin-bottom: 6px; }
+  .card h3 { font-family: 'Bricolage Grotesque', sans-serif; font-size: 13px;
+             margin: 0; font-weight: 700; letter-spacing: -0.01em; }
+  .card .toggle-row { display: flex; gap: 4px; }
+  .toggle { font-family: 'JetBrains Mono', monospace; font-size: 9px;
+            padding: 3px 8px; background: transparent; border: 1px solid var(--hairline);
+            border-radius: 999px; color: var(--muted); cursor: pointer;
+            text-transform: uppercase; letter-spacing: 0.1em; }
+  .toggle.active { background: var(--ink); color: white; border-color: var(--ink); }
+
+  .span-2 { grid-column: span 2; }
+  .plot { width: 100%; }
+
+  footer { margin-top: 14px; font-family: 'JetBrains Mono', monospace; font-size: 10px;
+           color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="left">
+    <h1>Product overview</h1>
+    <div class="sub">refreshed daily · plotly · apps script</div>
+  </div>
+  <div class="right" id="range-chips">
+    <button class="chip" data-range="30">30d</button>
+    <button class="chip active" data-range="90">90d</button>
+    <button class="chip" data-range="all">all</button>
+  </div>
+</header>
+
+<div class="grid">
+
+  <div class="tile">
+    <div class="label">DAU</div>
+    <div class="value">1 472</div>
+    <div class="delta">▲ 12.4% vs 30d</div>
+  </div>
+
+  <div class="tile">
+    <div class="label">Paying users</div>
+    <div class="value">8 240</div>
+    <div class="delta">▲ 3.1% vs 30d</div>
+  </div>
+
+  <div class="tile">
+    <div class="label">Revenue, MTD</div>
+    <div class="value">$184k</div>
+    <div class="delta bad">▼ 2.0% vs 30d</div>
+  </div>
+
+  <div class="card span-2">
+    <div class="head"><h3>DAU over time</h3>
+      <div class="toggle-row" id="dau-info">
+        <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#888;letter-spacing:0.1em;text-transform:uppercase;">range follows header chips</span>
+      </div>
+    </div>
+    <div id="chart-dau" class="plot"></div>
+  </div>
+
+  <div class="card">
+    <div class="head"><h3>Revenue by country</h3>
+      <div class="toggle-row" id="plan-toggles">
+        <button class="toggle active" data-plan="all">all</button>
+        <button class="toggle" data-plan="starter">starter</button>
+        <button class="toggle" data-plan="pro">pro</button>
+        <button class="toggle" data-plan="enterprise">ent</button>
+      </div>
+    </div>
+    <div id="chart-bar" class="plot"></div>
+  </div>
+
+  <div class="card">
+    <div class="head"><h3>Activation funnel</h3></div>
+    <div id="chart-funnel" class="plot"></div>
+  </div>
+
+  <div class="card span-2">
+    <div class="head"><h3>Retention by cohort</h3>
+      <div class="toggle-row" id="cohort-toggles"></div>
+    </div>
+    <div id="chart-cohorts" class="plot"></div>
+  </div>
+
+</div>
+
+<footer>Hosted on Google Apps Script · single HTML page · plotly.js from CDN</footer>
+
+<script>
+const D = {"days": ["2026-01-01", "2026-01-02", "2026-01-03", "2026-01-04", "2026-01-05", "2026-01-06", "2026-01-07", "2026-01-08", "2026-01-09", "2026-01-10", "2026-01-11", "2026-01-12", "2026-01-13", "2026-01-14", "2026-01-15", "2026-01-16", "2026-01-17", "2026-01-18", "2026-01-19", "2026-01-20", "2026-01-21", "2026-01-22", "2026-01-23", "2026-01-24", "2026-01-25", "2026-01-26", "2026-01-27", "2026-01-28", "2026-01-29", "2026-01-30", "2026-01-31", "2026-02-01", "2026-02-02", "2026-02-03", "2026-02-04", "2026-02-05", "2026-02-06", "2026-02-07", "2026-02-08", "2026-02-09", "2026-02-10", "2026-02-11", "2026-02-12", "2026-02-13", "2026-02-14", "2026-02-15", "2026-02-16", "2026-02-17", "2026-02-18", "2026-02-19", "2026-02-20", "2026-02-21", "2026-02-22", "2026-02-23", "2026-02-24", "2026-02-25", "2026-02-26", "2026-02-27", "2026-02-28", "2026-03-01", "2026-03-02", "2026-03-03", "2026-03-04", "2026-03-05", "2026-03-06", "2026-03-07", "2026-03-08", "2026-03-09", "2026-03-10", "2026-03-11", "2026-03-12", "2026-03-13", "2026-03-14", "2026-03-15", "2026-03-16", "2026-03-17", "2026-03-18", "2026-03-19", "2026-03-20", "2026-03-21", "2026-03-22", "2026-03-23", "2026-03-24", "2026-03-25", "2026-03-26", "2026-03-27", "2026-03-28", "2026-03-29", "2026-03-30", "2026-03-31", "2026-04-01", "2026-04-02", "2026-04-03", "2026-04-04", "2026-04-05", "2026-04-06", "2026-04-07", "2026-04-08", "2026-04-09", "2026-04-10", "2026-04-11", "2026-04-12", "2026-04-13", "2026-04-14", "2026-04-15", "2026-04-16", "2026-04-17", "2026-04-18", "2026-04-19", "2026-04-20", "2026-04-21", "2026-04-22", "2026-04-23", "2026-04-24", "2026-04-25", "2026-04-26", "2026-04-27", "2026-04-28", "2026-04-29", "2026-04-30"], "dau": [1110, 1070, 1131, 1141, 1052, 1076, 1125, 1115, 1128, 1104, 1163, 1164, 1144, 1182, 1164, 1125, 1168, 1129, 1192, 1165, 1165, 1152, 1217, 1176, 1171, 1177, 1209, 1207, 1212, 1216, 1274, 1196, 1197, 1190, 1240, 1260, 1223, 1204, 1208, 1258, 1265, 1262, 1227, 1259, 1259, 1266, 1290, 1273, 1291, 1275, 1286, 1300, 1237, 1277, 1276, 1274, 1289, 1349, 1277, 1339, 1258, 1305, 1324, 1341, 1349, 1355, 1322, 1322, 1367, 1337, 1306, 1314, 1325, 1374, 1366, 1387, 1355, 1377, 1395, 1369, 1397, 1365, 1378, 1381, 1358, 1416, 1389, 1407, 1426, 1428, 1439, 1418, 1411, 1426, 1378, 1389, 1396, 1410, 1459, 1420, 1441, 1498, 1449, 1487, 1437, 1464, 1444, 1467, 1508, 1429, 1502, 1499, 1476, 1453, 1505, 1489, 1517, 1514, 1568, 1512], "countries": ["US", "BR", "DE", "ES", "FR", "MX", "IN", "GB", "JP", "IT"], "revenue": {"all": [124, 88, 71, 64, 58, 52, 49, 41, 38, 33], "starter": [24, 38, 14, 21, 18, 24, 34, 11, 9, 13], "pro": [62, 38, 25, 26, 26, 22, 12, 19, 17, 14], "enterprise": [38, 12, 32, 17, 14, 6, 3, 11, 12, 6]}, "stages": ["Visited", "Signed up", "Activated", "Used 7d", "Paid"], "counts": [12000, 4200, 2600, 1700, 480], "week": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], "cohorts": ["2025-Q1", "2025-Q2", "2025-Q3", "2025-Q4", "2026-Q1"], "cohort_data": {"2025-Q1": [1.0, 0.52, 0.39, 0.32999999999999996, 0.28, 0.25, 0.23, 0.21, 0.2, 0.19, 0.185, 0.18, 0.175], "2025-Q2": [1.0, 0.54, 0.41, 0.35, 0.3, 0.27, 0.25, 0.22999999999999998, 0.22, 0.21, 0.205, 0.19999999999999998, 0.19499999999999998], "2025-Q3": [1.0, 0.5700000000000001, 0.44, 0.38, 0.33, 0.30000000000000004, 0.28, 0.26, 0.25, 0.24, 0.235, 0.22999999999999998, 0.22499999999999998], "2025-Q4": [1.0, 0.6000000000000001, 0.47, 0.41, 0.36, 0.33, 0.31, 0.29, 0.28, 0.27, 0.265, 0.26, 0.255], "2026-Q1": [1.0, 0.63, 0.5, 0.44, 0.39, 0.36000000000000004, 0.34, 0.32, 0.31, 0.3, 0.295, 0.29, 0.285]}, "cohort_colors": ["#CCCCCC", "#999999", "#666666", "#1A1A1A", "#FF00FF"]};
+
+const PLOT_CONFIG = { displayModeBar: false, responsive: true };
+const baseLayout = {
+  margin: { l: 44, r: 8, t: 8, b: 32 },
+  font: { family: 'Inter', size: 11, color: '#1A1A1A' },
+  paper_bgcolor: 'white',
+  plot_bgcolor: 'white',
+  xaxis: { gridcolor: '#EFEFEF', zeroline: false },
+  yaxis: { gridcolor: '#EFEFEF', zeroline: false },
+};
+
+// === DAU line ============================================================
+const lastIdx = D.days.length - 1;
+const dauTrace = {
+  x: D.days, y: D.dau, mode: 'lines',
+  line: { color: '#1A1A1A', width: 2 },
+  hovertemplate: '%{x|%b %d}<br>%{y} DAU<extra></extra>',
+};
+const dauMarker = {
+  x: [D.days[lastIdx]], y: [D.dau[lastIdx]], mode: 'markers',
+  marker: { color: '#FF00FF', size: 8 },
+  hoverinfo: 'skip', showlegend: false,
+};
+function dauAnnotation(range) {
+  const idx = lastIdx;
+  return [{
+    x: D.days[idx], y: D.dau[idx],
+    text: '<b>' + D.dau[idx].toLocaleString() + '</b>',
+    showarrow: false,
+    xshift: -6, yshift: -14,
+    xanchor: 'right', yanchor: 'top',
+    font: { color: '#FF00FF', size: 12, family: 'JetBrains Mono' },
+  }];
+}
+Plotly.newPlot('chart-dau', [dauTrace, dauMarker], {
+  ...baseLayout, height: 200,
+  xaxis: { ...baseLayout.xaxis, showgrid: false },
+  yaxis: { ...baseLayout.yaxis, title: 'DAU' },
+  showlegend: false,
+  annotations: dauAnnotation('90'),
+}, PLOT_CONFIG);
+
+function applyDauRange(range) {
+  let lo, hi;
+  if (range === 'all') {
+    lo = D.days[0]; hi = D.days[D.days.length - 1];
+  } else {
+    const n = parseInt(range, 10);
+    hi = D.days[D.days.length - 1];
+    lo = D.days[D.days.length - n];
+  }
+  Plotly.relayout('chart-dau', { 'xaxis.range': [lo, hi] });
+}
+applyDauRange('90');
+
+document.querySelectorAll('#range-chips .chip').forEach(b => {
+  b.addEventListener('click', () => {
+    document.querySelectorAll('#range-chips .chip').forEach(x => x.classList.remove('active'));
+    b.classList.add('active');
+    applyDauRange(b.dataset.range);
+  });
+});
+
+// === Bar (revenue by country) ==========================================
+function renderBar(plan) {
+  const data = D.revenue[plan];
+  const pairs = D.countries.map((c, i) => [c, data[i]]).sort((a, b) => b[1] - a[1]);
+  Plotly.react('chart-bar', [{
+    type: 'bar',
+    x: pairs.map(p => p[0]),
+    y: pairs.map(p => p[1]),
+    text: pairs.map(p => p[1]),
+    textposition: 'outside',
+    textfont: { family: 'JetBrains Mono', size: 10 },
+    marker: { color: '#1A1A1A' },
+  }], {
+    ...baseLayout, height: 230,
+    yaxis: { ...baseLayout.yaxis, title: 'revenue (k)' },
+  }, PLOT_CONFIG);
+}
+renderBar('all');
+
+document.querySelectorAll('#plan-toggles .toggle').forEach(b => {
+  b.addEventListener('click', () => {
+    document.querySelectorAll('#plan-toggles .toggle').forEach(x => x.classList.remove('active'));
+    b.classList.add('active');
+    renderBar(b.dataset.plan);
+  });
+});
+
+// === Funnel ===============================================================
+// Plotly's native funnel renders unpredictably with custom themes — use a
+// horizontal bar chart sorted top-down to mimic the funnel shape with full
+// control over bar widths and labels.
+const fnTotal = D.counts[0];
+const stagesRev = D.stages.slice().reverse();
+const countsRev = D.counts.slice().reverse();
+const fnText = countsRev.map(c =>
+  c.toLocaleString() + '  ·  ' + (100 * c / fnTotal).toFixed(0) + '%');
+const funnelAnnotations = stagesRev.map((stage, i) => ({
+  x: 1, y: stage, xref: 'paper', yref: 'y',
+  text: fnText[i],
+  showarrow: false,
+  xanchor: 'right',
+  font: { family: 'JetBrains Mono', size: 11, color: '#1A1A1A' },
+}));
+Plotly.newPlot('chart-funnel', [{
+  type: 'bar',
+  orientation: 'h',
+  y: stagesRev,
+  x: countsRev,
+  marker: { color: '#1A1A1A' },
+  hovertemplate: '%{y}: %{x:,}<extra></extra>',
+}], {
+  font: { family: 'Inter', size: 11, color: '#1A1A1A' },
+  paper_bgcolor: 'white',
+  plot_bgcolor: 'white',
+  height: 230,
+  margin: { l: 90, r: 16, t: 10, b: 10 },
+  showlegend: false,
+  xaxis: { visible: false, range: [0, fnTotal * 1.80], fixedrange: true },
+  yaxis: { gridcolor: '#EFEFEF' },
+  bargap: 0.25,
+  annotations: funnelAnnotations,
+}, PLOT_CONFIG);
+
+// === Cohort retention ====================================================
+const cohortToggles = document.getElementById('cohort-toggles');
+const visibleCohorts = new Set(D.cohorts);
+D.cohorts.forEach((c, i) => {
+  const b = document.createElement('button');
+  b.className = 'toggle active';
+  b.dataset.cohort = c;
+  b.textContent = c;
+  b.style.borderColor = D.cohort_colors[i];
+  b.addEventListener('click', () => {
+    if (visibleCohorts.has(c)) {
+      visibleCohorts.delete(c); b.classList.remove('active');
+    } else {
+      visibleCohorts.add(c); b.classList.add('active');
+    }
+    renderCohorts();
+  });
+  cohortToggles.appendChild(b);
+});
+
+function renderCohorts() {
+  const traces = D.cohorts.map((c, i) => ({
+    x: D.week,
+    y: D.cohort_data[c],
+    mode: 'lines+markers',
+    name: c,
+    line: { color: D.cohort_colors[i], width: 2 },
+    marker: { size: 5 },
+    visible: visibleCohorts.has(c),
+  }));
+
+  // Annotate week 4 / 8 / 12 on the latest cohort (last in the array).
+  const latest = D.cohorts[D.cohorts.length - 1];
+  const latestColor = D.cohort_colors[D.cohort_colors.length - 1];
+  const ann = visibleCohorts.has(latest)
+    ? [4, 8, 12].map(w => ({
+        x: w, y: D.cohort_data[latest][w],
+        text: '<b>W' + w + ': ' + (D.cohort_data[latest][w] * 100).toFixed(0) + '%</b>',
+        showarrow: false, yshift: 14,
+        font: { color: latestColor, size: 11, family: 'JetBrains Mono' },
+      }))
+    : [];
+
+  Plotly.react('chart-cohorts', traces, {
+    ...baseLayout,
+    height: 230,
+    showlegend: false,
+    xaxis: { ...baseLayout.xaxis, title: 'week since signup', type: 'linear' },
+    yaxis: { ...baseLayout.yaxis, title: 'retained', tickformat: '.0%', range: [0, 1.05], type: 'linear', dtick: 0.2 },
+    annotations: ann,
+  }, PLOT_CONFIG);
+}
+renderCohorts();
+</script>
+
+</body></html>

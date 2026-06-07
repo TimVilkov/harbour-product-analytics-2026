@@ -1,0 +1,293 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>Power simulation</title>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]});"></script>
+<style>
+:root{--pink:#FF00FF;--ink:#1A1A1A;--muted:#6B6B6B;--bg:#FAFAFA;--red:#E5142B;--green:#1A8F4F;--blue:#1A6FE5}
+*{box-sizing:border-box}
+body{margin:0;font-family:'Inter',system-ui,-apple-system,sans-serif;color:var(--ink);background:#fff;padding:2rem 2.5rem;max-width:1100px;margin-inline:auto}
+h1{font-family:'Bricolage Grotesque','Inter',sans-serif;font-weight:800;font-size:2.2rem;letter-spacing:-0.02em;margin:0 0 0.4rem}
+p.lead{color:var(--muted);font-size:1rem;line-height:1.55;margin:0 0 1.2rem;max-width:54rem}
+.setup{background:var(--bg);border-left:3px solid var(--ink);padding:0.7rem 1rem;margin-bottom:1rem;font-size:0.92rem;line-height:1.55}
+.setup .label{font-family:'JetBrains Mono',monospace;font-size:0.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;margin-right:0.4rem}
+.controls{display:flex;gap:1rem;align-items:center;flex-wrap:wrap;padding:0.8rem 1rem;background:var(--bg);border-left:3px solid var(--pink);margin-bottom:1rem;font-size:0.95rem}
+.controls label{font-family:'JetBrains Mono',monospace;font-size:0.85rem;color:var(--ink);text-transform:uppercase;letter-spacing:0.08em}
+.controls select,.controls button,.controls input{font-family:'Inter',sans-serif;font-size:0.95rem;padding:0.4rem 0.8rem;border:1.4px solid var(--ink);background:#fff;color:var(--ink);cursor:pointer}
+.controls button{background:var(--ink);color:#fff}
+.controls button:hover{background:var(--pink)}
+.controls button.secondary{background:#fff;color:var(--ink)}
+.info{font-family:'JetBrains Mono',monospace;font-size:0.85rem;color:var(--muted);margin-left:auto}
+#chart{width:100%;height:340px}
+#emp{width:100%;height:260px;margin-top:0.4rem}
+.tracker{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:1rem;padding:0.8rem 1rem;background:var(--bg);border-left:3px solid var(--ink);margin:0.6rem 0;font-family:'JetBrains Mono',monospace;font-size:0.95rem}
+.tracker .label{display:block;color:var(--muted);text-transform:uppercase;font-size:0.72rem;letter-spacing:0.1em;margin-bottom:0.2rem}
+.tracker .val{font-weight:700;font-size:1.1rem}
+.tracker .ok{color:var(--green)}
+.tracker .pink{color:var(--pink)}
+.note{margin-top:1rem;color:var(--muted);font-size:0.85rem;line-height:1.55}
+.pink{color:var(--pink);font-weight:700}
+.red{color:var(--red);font-weight:700}
+.green{color:var(--green);font-weight:700}
+</style>
+</head>
+<body>
+<h1>Power under $H_1$</h1>
+<p class="lead">We fix a true effect size $\mu_1 - \mu_0$ and simulate the two-distribution picture that ties $\alpha$ and $\beta$ together. The top panel shows $\bar X$ under $H_0 \sim \mathcal{N}(\mu_0, \sigma^2/n)$ and under $H_1 \sim \mathcal{N}(\mu_1, \sigma^2/n)$ with the shaded $\alpha$, $\beta$, and power regions. The bottom panel runs $M$ independent experiments under $H_1$ at the chosen effect, computes $Z$ each time, and tracks the empirical rejection rate. That number is the empirical power, equivalently the true positive rate. As $M$ grows it converges to the theoretical area in the top panel.</p>
+
+<div class="setup">
+<div><span class="label">data</span> $X_i \sim \mathcal{N}(\mu_1, \sigma^2)$ under $H_1$, with $\mu_0 = 0$, $\sigma = 1$</div>
+<div style="margin-top:0.2rem;"><span class="label">statistic</span> $Z = (\bar X - \mu_0)/(\sigma/\sqrt{n})$. Under $H_0$: $\mathcal{N}(0, 1)$. Under $H_1$: $\mathcal{N}(\sqrt n \, d, 1)$ with $d = (\mu_1 - \mu_0)/\sigma$</div>
+<div style="margin-top:0.2rem;"><span class="label">decision</span> reject $H_0$ when $Z$ enters the rejection region $C_\alpha$</div>
+</div>
+
+<div class="controls">
+  <label for="n">n</label>
+  <select id="n">
+    <option>10</option>
+    <option selected>30</option>
+    <option>100</option>
+    <option>300</option>
+    <option>1000</option>
+  </select>
+  <label for="mu1">μ₁</label>
+  <select id="mu1">
+    <option value="0.1">0.1</option>
+    <option value="0.2">0.2</option>
+    <option value="0.3" selected>0.3</option>
+    <option value="0.5">0.5</option>
+    <option value="0.8">0.8</option>
+  </select>
+  <label for="alpha">α</label>
+  <select id="alpha">
+    <option value="0.05" selected>5%</option>
+    <option value="0.01">1%</option>
+    <option value="0.001">0.1%</option>
+  </select>
+  <label for="alt">alternative</label>
+  <select id="alt">
+    <option value="two" selected>two-sided · μ ≠ 0</option>
+    <option value="greater">one-sided · μ &gt; 0</option>
+  </select>
+  <button id="draw100">Draw 100 more</button>
+  <button id="draw5000">Draw 5000 more</button>
+  <button id="reset" class="secondary">Reset</button>
+</div>
+
+<div class="tracker">
+  <div><span class="label">theoretical α</span><span id="alpha-th" class="val">5%</span></div>
+  <div><span class="label">theoretical power</span><span id="power-th" class="val pink">—</span></div>
+  <div><span class="label">empirical TPR</span><span id="tpr" class="val pink">—</span></div>
+  <div><span class="label">total runs</span><span id="total" class="val">0</span></div>
+</div>
+
+<div id="chart"></div>
+<div id="emp"></div>
+
+<p class="note">Increase <strong>n</strong>: both bells narrow, overlap shrinks, empirical TPR climbs and matches the theoretical area. Decrease <strong>μ₁</strong>: bells overlap more, TPR drops. Power is earned by data or by a larger true effect, not by tuning $\alpha$.</p>
+
+<script>
+const zMap2 = { '0.05': 1.96, '0.01': 2.5758, '0.001': 3.2905 };
+const zMap1 = { '0.05': 1.6449, '0.01': 2.3263, '0.001': 3.0902 };
+
+let zValues = [];
+
+function rnorm() {
+  const u = 1 - Math.random(), v = Math.random();
+  return Math.sqrt(-2*Math.log(u)) * Math.cos(2*Math.PI*v);
+}
+
+function normalPdf(x, mean, sd) {
+  const z = (x - mean) / sd;
+  return Math.exp(-z*z/2) / (sd * Math.sqrt(2*Math.PI));
+}
+
+function normalCdf(x) {
+  const t = 1 / (1 + 0.2316419 * Math.abs(x));
+  const d = 0.3989422804014327 * Math.exp(-x*x/2);
+  const p = d * t * (0.31938153 + t * (-0.356563782 + t * (1.781477937 + t * (-1.821255978 + t * 1.330274429))));
+  return x > 0 ? 1 - p : p;
+}
+
+function getParams() {
+  const alpha = document.getElementById('alpha').value;
+  const alt = document.getElementById('alt').value;
+  const mu1 = parseFloat(document.getElementById('mu1').value);
+  const n = parseInt(document.getElementById('n').value);
+  const sigma = 1.0;
+  const d = (mu1 - 0) / sigma;
+  const nc = Math.sqrt(n) * d;
+  let crit;
+  if (alt === 'two') crit = { lower: -zMap2[alpha], upper: zMap2[alpha] };
+  else crit = { lower: -Infinity, upper: zMap1[alpha] };
+  let powerTh;
+  if (alt === 'two') {
+    powerTh = (1 - normalCdf(crit.upper - nc)) + normalCdf(crit.lower - nc);
+  } else {
+    powerTh = 1 - normalCdf(crit.upper - nc);
+  }
+  return { alpha: parseFloat(alpha), alt, mu1, n, sigma, d, nc, crit, powerTh };
+}
+
+function drawTop() {
+  const { alpha, alt, mu1, n, sigma, crit, powerTh, nc } = getParams();
+  const seMean = sigma / Math.sqrt(n);
+  const xMin = Math.min(0, mu1) - 4 * seMean;
+  const xMax = Math.max(0, mu1) + 4 * seMean;
+  const step = (xMax - xMin) / 320;
+  const xs = [];
+  const yH0 = [];
+  const yH1 = [];
+  for (let x = xMin; x <= xMax + 1e-9; x += step) {
+    xs.push(x);
+    yH0.push(normalPdf(x, 0, seMean));
+    yH1.push(normalPdf(x, mu1, seMean));
+  }
+  const critXupper = crit.upper * seMean;
+  const critXlower = crit.lower === -Infinity ? -Infinity : crit.lower * seMean;
+
+  const xsAlphaR = xs.filter(x => x >= critXupper);
+  const ysAlphaR = xsAlphaR.map(x => normalPdf(x, 0, seMean));
+  const xsAlphaL = critXlower === -Infinity ? [] : xs.filter(x => x <= critXlower);
+  const ysAlphaL = xsAlphaL.map(x => normalPdf(x, 0, seMean));
+
+  const xsPowerR = xs.filter(x => x >= critXupper);
+  const ysPowerR = xsPowerR.map(x => normalPdf(x, mu1, seMean));
+  const xsPowerL = critXlower === -Infinity ? [] : xs.filter(x => x <= critXlower);
+  const ysPowerL = xsPowerL.map(x => normalPdf(x, mu1, seMean));
+
+  const xsBeta = critXlower === -Infinity ? xs.filter(x => x <= critXupper) : xs.filter(x => x >= critXlower && x <= critXupper);
+  const ysBeta = xsBeta.map(x => normalPdf(x, mu1, seMean));
+
+  const traces = [
+    { x: xs, y: yH0, mode: 'lines', line: { color: '#1A1A1A', width: 1.6 }, name: 'H₀: μ = 0', hoverinfo: 'skip' },
+    { x: xs, y: yH1, mode: 'lines', line: { color: '#1A6FE5', width: 1.6 }, name: 'H₁: μ = ' + mu1, hoverinfo: 'skip' },
+    { x: xsAlphaR, y: ysAlphaR, fill: 'tozeroy', mode: 'none', fillcolor: 'rgba(229,20,43,0.35)', name: 'α (FP region)', hoverinfo: 'skip' },
+    ...(xsAlphaL.length ? [{ x: xsAlphaL, y: ysAlphaL, fill: 'tozeroy', mode: 'none', fillcolor: 'rgba(229,20,43,0.35)', name: 'α (lower)', hoverinfo: 'skip', showlegend: false }] : []),
+    { x: xsBeta, y: ysBeta, fill: 'tozeroy', mode: 'none', fillcolor: 'rgba(107,107,107,0.30)', name: 'β (Type II)', hoverinfo: 'skip' },
+    { x: xsPowerR, y: ysPowerR, fill: 'tozeroy', mode: 'none', fillcolor: 'rgba(26,143,79,0.35)', name: 'power', hoverinfo: 'skip' },
+    ...(xsPowerL.length ? [{ x: xsPowerL, y: ysPowerL, fill: 'tozeroy', mode: 'none', fillcolor: 'rgba(26,143,79,0.35)', name: 'power (lower)', hoverinfo: 'skip', showlegend: false }] : []),
+  ];
+
+  const shapes = [
+    { type: 'line', x0: critXupper, x1: critXupper, y0: 0, y1: 1, yref: 'paper', line: { color: '#E5142B', width: 1.2, dash: 'dot' } },
+  ];
+  if (critXlower !== -Infinity) {
+    shapes.push({ type: 'line', x0: critXlower, x1: critXlower, y0: 0, y1: 1, yref: 'paper', line: { color: '#E5142B', width: 1.2, dash: 'dot' } });
+  }
+  shapes.push({ type: 'line', x0: 0, x1: 0, y0: 0, y1: 1, yref: 'paper', line: { color: '#1A1A1A', width: 0.6, dash: 'dash' } });
+  shapes.push({ type: 'line', x0: mu1, x1: mu1, y0: 0, y1: 1, yref: 'paper', line: { color: '#1A6FE5', width: 0.6, dash: 'dash' } });
+
+  const layout = {
+    margin: { t: 30, l: 50, r: 20, b: 40 },
+    showlegend: true,
+    legend: { orientation: 'h', y: 1.18, x: 0, font: { family: 'JetBrains Mono', size: 11 } },
+    xaxis: { title: { text: 'sample mean X̄', font: { family: 'Inter', size: 12, color: '#6B6B6B' } }, zeroline: false, gridcolor: '#EEEEEE', range: [xMin, xMax] },
+    yaxis: { title: { text: 'density', font: { family: 'Inter', size: 12, color: '#6B6B6B' } }, zeroline: false, gridcolor: '#EEEEEE' },
+    shapes,
+    paper_bgcolor: '#fff',
+    plot_bgcolor: '#fff',
+    font: { family: 'Inter', color: '#1A1A1A' }
+  };
+  Plotly.react('chart', traces, layout, { displayModeBar: false, responsive: true });
+  document.getElementById('alpha-th').textContent = (alpha * 100).toFixed(alpha < 0.01 ? 1 : 0) + '%';
+  document.getElementById('power-th').textContent = (powerTh * 100).toFixed(1) + '%';
+}
+
+function drawEmpirical() {
+  const { crit } = getParams();
+  const binSize = 0.2;
+  const xMin = -5;
+  const xMax = 7;
+  const nBins = Math.round((xMax - xMin) / binSize);
+  const bins = new Array(nBins).fill(0);
+  for (const z of zValues) {
+    const idx = Math.floor((z - xMin) / binSize);
+    if (idx >= 0 && idx < nBins) bins[idx]++;
+  }
+  const total = zValues.length || 1;
+  const binCenters = [];
+  const densities = [];
+  const colors = [];
+  for (let i = 0; i < nBins; i++) {
+    const center = xMin + (i + 0.5) * binSize;
+    binCenters.push(center);
+    densities.push(bins[i] / (total * binSize));
+    const inReject = center >= crit.upper || (crit.lower !== -Infinity && center <= crit.lower);
+    colors.push(inReject ? 'rgba(26,143,79,0.7)' : 'rgba(107,107,107,0.45)');
+  }
+
+  const traces = [
+    { type: 'bar', x: binCenters, y: densities, marker: { color: colors }, hoverinfo: 'skip', name: 'empirical Z under H₁' }
+  ];
+
+  const shapes = [
+    { type: 'line', x0: crit.upper, x1: crit.upper, y0: 0, y1: 1, yref: 'paper', line: { color: '#E5142B', width: 1.2, dash: 'dot' } }
+  ];
+  if (crit.lower !== -Infinity) {
+    shapes.push({ type: 'line', x0: crit.lower, x1: crit.lower, y0: 0, y1: 1, yref: 'paper', line: { color: '#E5142B', width: 1.2, dash: 'dot' } });
+  }
+
+  const layout = {
+    margin: { t: 16, l: 50, r: 20, b: 40 },
+    showlegend: false,
+    bargap: 0.04,
+    xaxis: { title: { text: 'observed Z under H₁', font: { family: 'Inter', size: 12, color: '#6B6B6B' } }, zeroline: false, gridcolor: '#EEEEEE', range: [xMin, xMax] },
+    yaxis: { title: { text: 'density', font: { family: 'Inter', size: 12, color: '#6B6B6B' } }, zeroline: false, gridcolor: '#EEEEEE' },
+    shapes,
+    paper_bgcolor: '#fff',
+    plot_bgcolor: '#fff',
+    font: { family: 'Inter', color: '#1A1A1A' }
+  };
+  Plotly.react('emp', traces, layout, { displayModeBar: false, responsive: true });
+}
+
+function updateTpr() {
+  const { crit } = getParams();
+  let rejected = 0;
+  for (const z of zValues) {
+    if (z >= crit.upper || (crit.lower !== -Infinity && z <= crit.lower)) rejected++;
+  }
+  const tpr = zValues.length ? rejected / zValues.length : 0;
+  document.getElementById('tpr').textContent = zValues.length ? (tpr * 100).toFixed(1) + '%' : '—';
+  document.getElementById('total').textContent = zValues.length;
+}
+
+function runSims(count) {
+  const { mu1, n, sigma, nc } = getParams();
+  for (let i = 0; i < count; i++) {
+    let sum = 0;
+    for (let j = 0; j < n; j++) sum += mu1 + sigma * rnorm();
+    const xbar = sum / n;
+    const z = (xbar - 0) / (sigma / Math.sqrt(n));
+    zValues.push(z);
+  }
+  drawEmpirical();
+  updateTpr();
+}
+
+function reset() {
+  zValues = [];
+  drawTop();
+  drawEmpirical();
+  updateTpr();
+}
+
+document.getElementById('n').addEventListener('change', reset);
+document.getElementById('mu1').addEventListener('change', reset);
+document.getElementById('alpha').addEventListener('change', reset);
+document.getElementById('alt').addEventListener('change', reset);
+document.getElementById('draw100').addEventListener('click', () => runSims(100));
+document.getElementById('draw5000').addEventListener('click', () => runSims(5000));
+document.getElementById('reset').addEventListener('click', reset);
+
+window.addEventListener('load', () => { reset(); runSims(500); });
+</script>
+</body>
+</html>

@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>p-value under H₀</title>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]});"></script>
+<style>
+:root{--pink:#FF00FF;--ink:#1A1A1A;--muted:#6B6B6B;--bg:#FAFAFA;--red:#E5142B}
+*{box-sizing:border-box}
+body{margin:0;font-family:'Inter',system-ui,-apple-system,sans-serif;color:var(--ink);background:#fff;padding:2rem 2.5rem;max-width:1100px;margin-inline:auto}
+h1{font-family:'Bricolage Grotesque','Inter',sans-serif;font-weight:800;font-size:2.2rem;letter-spacing:-0.02em;margin:0 0 0.4rem}
+p.lead{color:var(--muted);font-size:1rem;line-height:1.55;margin:0 0 1.2rem;max-width:54rem}
+.setup{background:var(--bg);border-left:3px solid var(--ink);padding:0.7rem 1rem;margin-bottom:1rem;font-size:0.92rem;line-height:1.55}
+.setup .label{font-family:'JetBrains Mono',monospace;font-size:0.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;margin-right:0.4rem}
+.controls{display:flex;gap:1rem;align-items:center;flex-wrap:wrap;padding:0.8rem 1rem;background:var(--bg);border-left:3px solid var(--pink);margin-bottom:1rem;font-size:0.95rem}
+.controls label{font-family:'JetBrains Mono',monospace;font-size:0.85rem;color:var(--ink);text-transform:uppercase;letter-spacing:0.08em}
+.controls select,.controls button,.controls input{font-family:'Inter',sans-serif;font-size:0.95rem;padding:0.4rem 0.8rem;border:1.4px solid var(--ink);background:#fff;color:var(--ink);cursor:pointer}
+.controls button{background:var(--ink);color:#fff}
+.controls button:hover{background:var(--pink)}
+.info{font-family:'JetBrains Mono',monospace;font-size:0.85rem;color:var(--muted);margin-left:auto}
+#charts{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-top:0.5rem}
+.chart{width:100%;height:340px}
+.chart-title{font-family:'JetBrains Mono',monospace;font-size:0.8rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;margin:0 0 0.2rem}
+.note{margin-top:1rem;color:var(--muted);font-size:0.85rem;line-height:1.55}
+.pink{color:var(--pink);font-weight:700}
+.legend-strip{display:grid;grid-template-columns:repeat(10, 1fr);gap:2px;margin:0.5rem 0 0.8rem;max-width:760px}
+.legend-strip div{padding:0.25rem 0.4rem;font-family:'JetBrains Mono',monospace;font-size:0.7rem;color:#fff;text-align:center;font-weight:700}
+</style>
+</head>
+<body>
+<h1>p-value under H<sub>0</sub></h1>
+<p class="lead">Under $H_0$, the p-value is uniformly distributed on $[0, 1]$. That is the reason the decision rule "reject if $p \lt \alpha$" controls the Type I rate at exactly $\alpha$: a fraction $\alpha$ of p-values fall below $\alpha$, by construction.</p>
+
+<div class="setup">
+<div><span class="label">data</span> $X_1, \dots, X_n \sim \mathcal{N}(0, 1)$ (so $H_0: \mu = 0$ is true). Continuous data so that $Z$ and $p$ are continuous too.</div>
+<div style="margin-top:0.2rem;"><span class="label">statistic</span> $Z = \sqrt{n}\,\bar X$, two-sided $p = 2(1 - \Phi(|Z|))$</div>
+<div style="margin-top:0.2rem;"><span class="label">claim</span> deciles of $Z$ and deciles of $p$ both contain roughly $1/10$ of all draws under $H_0$</div>
+</div>
+
+<div class="controls">
+  <label for="n">n</label>
+  <select id="n">
+    <option>30</option>
+    <option selected>100</option>
+    <option>500</option>
+  </select>
+  <button id="draw1000">Draw 1000 more</button>
+  <button id="draw10000">Draw 10000 more</button>
+  <button id="reset">Reset</button>
+  <span class="info">total: <span id="total">0</span></span>
+</div>
+
+<div class="legend-strip" id="legendStrip"></div>
+
+<div id="charts">
+  <div>
+    <div class="chart-title">Z statistic — coloured by p-value decile</div>
+    <div id="z-chart" class="chart"></div>
+  </div>
+  <div>
+    <div class="chart-title">p-value — coloured by p-value decile</div>
+    <div id="p-chart" class="chart"></div>
+  </div>
+</div>
+
+<p class="note">Same 10 colours on both charts, matched by p-value decile. The p-value histogram is flat. The Z histogram is bell-shaped, but each decile of $p$ corresponds to a symmetric pair of tail slices in $Z$, so each colour band carries the same total mass on both plots.</p>
+
+<script>
+// 10 perceptually-spread colours, decile 1 = smallest p (most extreme Z), decile 10 = largest p (Z near 0)
+const decileColors = [
+  '#E5142B', // 1 — extreme (rejected at α=0.05 for two-sided 5%)
+  '#F25C39',
+  '#F89A4A',
+  '#F5C66A',
+  '#E8DD78',
+  '#A8D49A',
+  '#67C7B0',
+  '#3FAFC0',
+  '#3F7CC4',
+  '#4A4AC7'  // 10 — p near 1
+];
+
+let zs = [];
+let ps = [];
+
+function rnorm() {
+  const u = 1 - Math.random(), v = Math.random();
+  return Math.sqrt(-2*Math.log(u)) * Math.cos(2*Math.PI*v);
+}
+
+// Standard normal CDF (Abramowitz & Stegun 7.1.26)
+function normCdf(x) {
+  const t = 1 / (1 + 0.2316419 * Math.abs(x));
+  const d = 0.3989422804014327 * Math.exp(-x*x/2);
+  const p = d * t * (0.319381530 + t * (-0.356563782 + t * (1.781477937 + t * (-1.821255978 + t * 1.330274429))));
+  return x >= 0 ? 1 - p : p;
+}
+
+function draw(count) {
+  const n = parseInt(document.getElementById('n').value);
+  for (let k = 0; k < count; k++) {
+    let s = 0;
+    for (let i = 0; i < n; i++) s += rnorm();
+    const xbar = s / n;
+    const z = Math.sqrt(n) * xbar; // σ = 1
+    const p_val = 2 * (1 - normCdf(Math.abs(z)));
+    zs.push(z);
+    ps.push(p_val);
+  }
+  update();
+}
+
+function decileOf(p) {
+  // map p ∈ [0,1] to decile 0..9
+  let idx = Math.floor(p * 10);
+  if (idx >= 10) idx = 9;
+  if (idx < 0) idx = 0;
+  return idx;
+}
+
+function update() {
+  document.getElementById('total').textContent = zs.length;
+
+  // Z chart: histogram, bars coloured by the decile of p_value the bar's bin belongs to.
+  // Strategy: for each Z bin, compute mean |z| → look up which decile of p it lands in.
+  // Simpler & correct: aggregate Z values into bins, but assign colour by computing the p that corresponds to the bin's z range. Use bin-center → p = 2(1-Φ(|z|)) → decile.
+  const zBinSize = 0.1;
+  const zStart = -4.5, zEnd = 4.5;
+  const numZBins = Math.round((zEnd - zStart) / zBinSize);
+  const zCounts = new Array(numZBins).fill(0);
+  for (const z of zs) {
+    if (z < zStart || z >= zEnd) continue;
+    const idx = Math.floor((z - zStart) / zBinSize);
+    zCounts[idx]++;
+  }
+  const totalZ = Math.max(1, zs.length);
+  const zCenters = [], zDensities = [], zColors = [];
+  for (let i = 0; i < numZBins; i++) {
+    const c = zStart + (i + 0.5) * zBinSize;
+    zCenters.push(c);
+    zDensities.push(zCounts[i] / (totalZ * zBinSize));
+    const p_center = 2 * (1 - normCdf(Math.abs(c)));
+    zColors.push(decileColors[decileOf(p_center)]);
+  }
+  const zTrace = {
+    x: zCenters, y: zDensities, type: 'bar',
+    marker: { color: zColors, line: { color: '#fff', width: 0.4 } },
+    width: zBinSize * 0.95,
+    hoverinfo: 'skip', showlegend: false
+  };
+  // N(0,1) overlay
+  const xs = [], ys = [];
+  for (let x = -4.5; x <= 4.5; x += 0.05) { xs.push(x); ys.push(Math.exp(-x*x/2)/Math.sqrt(2*Math.PI)); }
+  const zCurve = { x: xs, y: ys, mode: 'lines', type: 'scatter', line: { color: '#1A1A1A', width: 1.4 }, hoverinfo: 'skip', showlegend: false };
+
+  Plotly.react('z-chart', [zTrace, zCurve], {
+    paper_bgcolor: '#fff', plot_bgcolor: '#FAFAFA',
+    margin: { l: 50, r: 20, t: 10, b: 40 },
+    xaxis: { title: 'Z', range: [-4.5, 4.5], gridcolor: '#EEE' },
+    yaxis: { title: 'density', gridcolor: '#EEE' },
+    font: { family: 'Inter, sans-serif', color: '#1A1A1A' }
+  }, { responsive: true, displaylogo: false });
+
+  // p chart: 50 bins from 0 to 1, coloured by which decile each bin sits in
+  const numPBins = 50;
+  const pBinSize = 1 / numPBins;
+  const pCounts = new Array(numPBins).fill(0);
+  for (const p of ps) {
+    let idx = Math.floor(p * numPBins);
+    if (idx >= numPBins) idx = numPBins - 1;
+    if (idx < 0) idx = 0;
+    pCounts[idx]++;
+  }
+  const totalP = Math.max(1, ps.length);
+  const pX = [], pY = [], pColors = [];
+  for (let i = 0; i < numPBins; i++) {
+    const center = (i + 0.5) / numPBins;
+    pX.push(center);
+    pY.push(pCounts[i] / (totalP * pBinSize));
+    pColors.push(decileColors[decileOf(center)]);
+  }
+  const pTrace = {
+    x: pX, y: pY, type: 'bar',
+    marker: { color: pColors, line: { color: '#fff', width: 0.3 } },
+    width: pBinSize * 0.95,
+    hoverinfo: 'skip', showlegend: false
+  };
+  // Uniform reference line at density = 1
+  const refX = [0, 1], refY = [1, 1];
+  const refTrace = { x: refX, y: refY, mode: 'lines', type: 'scatter', line: { color: '#1A1A1A', width: 1.4, dash: 'dash' }, hoverinfo: 'skip', showlegend: false };
+
+  Plotly.react('p-chart', [pTrace, refTrace], {
+    paper_bgcolor: '#fff', plot_bgcolor: '#FAFAFA',
+    margin: { l: 50, r: 20, t: 10, b: 40 },
+    xaxis: { title: 'p', range: [0, 1], gridcolor: '#EEE' },
+    yaxis: { title: 'density', range: [0, 2], gridcolor: '#EEE' },
+    font: { family: 'Inter, sans-serif', color: '#1A1A1A' }
+  }, { responsive: true, displaylogo: false });
+}
+
+// Legend strip
+const strip = document.getElementById('legendStrip');
+for (let i = 0; i < 10; i++) {
+  const d = document.createElement('div');
+  d.style.background = decileColors[i];
+  d.textContent = `${i*10}–${(i+1)*10}%`;
+  strip.appendChild(d);
+}
+
+function reset() { zs = []; ps = []; update(); }
+
+document.getElementById('draw1000').addEventListener('click', () => draw(1000));
+document.getElementById('draw10000').addEventListener('click', () => draw(10000));
+document.getElementById('reset').addEventListener('click', reset);
+document.getElementById('n').addEventListener('change', reset);
+
+reset();
+draw(1000);
+</script>
+</body>
+</html>

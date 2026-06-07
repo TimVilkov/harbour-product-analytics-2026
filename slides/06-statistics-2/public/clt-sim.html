@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>CLT simulation</title>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]});"></script>
+<style>
+:root{--pink:#FF00FF;--ink:#1A1A1A;--muted:#6B6B6B;--bg:#FAFAFA}
+*{box-sizing:border-box}
+body{margin:0;font-family:'Inter',system-ui,-apple-system,sans-serif;color:var(--ink);background:#fff;padding:2rem 2.5rem;max-width:1100px;margin-inline:auto}
+h1{font-family:'Bricolage Grotesque','Inter',sans-serif;font-weight:800;font-size:2.2rem;letter-spacing:-0.02em;margin:0 0 0.4rem}
+p.lead{color:var(--muted);font-size:1rem;line-height:1.5;margin:0 0 1.2rem;max-width:48rem}
+.controls{display:flex;gap:1rem;align-items:center;flex-wrap:wrap;padding:0.8rem 1rem;background:var(--bg);border-left:3px solid var(--pink);margin-bottom:1rem;font-size:0.95rem}
+.controls label{font-family:'JetBrains Mono',monospace;font-size:0.85rem;color:var(--ink);text-transform:uppercase;letter-spacing:0.08em}
+.controls select,.controls button,.controls input{font-family:'Inter',sans-serif;font-size:0.95rem;padding:0.4rem 0.8rem;border:1.4px solid var(--ink);background:#fff;color:var(--ink);cursor:pointer}
+.controls button{background:var(--ink);color:#fff}
+.controls button:hover{background:var(--pink)}
+.info{font-family:'JetBrains Mono',monospace;font-size:0.85rem;color:var(--muted);margin-left:auto}
+#charts{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+.chart{width:100%;height:340px}
+.chart-title{font-family:'JetBrains Mono',monospace;font-size:0.8rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;margin:0.6rem 0 0.2rem}
+.note{margin-top:1rem;color:var(--muted);font-size:0.85rem;line-height:1.55}
+.pink{color:var(--pink);font-weight:700}
+.cauchy-warn{background:#FFF6FB;border-left:3px solid var(--pink);padding:0.6rem 1rem;margin-top:0.8rem;font-size:0.9rem;color:var(--ink)}
+</style>
+</head>
+<body>
+<h1>Central limit theorem</h1>
+<p class="lead">Draw many samples of size n from a source distribution, compute the standardised mean for each, and plot the histogram. Compare with the standard Normal density. As n grows, the histogram approaches <span class="pink">N(0, 1)</span> — for any source with finite variance.</p>
+
+<div class="controls">
+  <label for="dist">source</label>
+  <select id="dist">
+    <option value="bernoulli">Bernoulli(0.3)</option>
+    <option value="uniform" selected>Uniform(0, 1)</option>
+    <option value="exponential">Exponential(1)</option>
+    <option value="cauchy">Cauchy (counterexample)</option>
+  </select>
+  <label for="n">n (sample size)</label>
+  <select id="n">
+    <option>1</option>
+    <option>2</option>
+    <option>5</option>
+    <option selected>10</option>
+    <option>30</option>
+    <option>100</option>
+  </select>
+  <label for="reps">replicas</label>
+  <input id="reps" type="number" value="10000" min="500" max="100000" step="500" style="width:8rem"/>
+  <button id="run">Run</button>
+</div>
+
+<div id="cauchy-note" class="cauchy-warn" style="display:none">
+  Cauchy has no finite variance, so the standardised mean does not converge to N(0,1) at any n. This is the canonical case where CLT fails.
+</div>
+
+<div id="charts">
+  <div>
+    <div class="chart-title">source distribution</div>
+    <div id="source-chart" class="chart"></div>
+  </div>
+  <div>
+    <div class="chart-title">standardised sample mean</div>
+    <div id="mean-chart" class="chart"></div>
+  </div>
+</div>
+
+<p class="note">For Bernoulli, Uniform, Exponential: increase n and watch the right-hand histogram tighten around the Normal curve. For Cauchy: it stays wild no matter how large n gets.</p>
+
+<script>
+function rnorm() {
+  const u = 1 - Math.random(), v = Math.random();
+  return Math.sqrt(-2*Math.log(u)) * Math.cos(2*Math.PI*v);
+}
+
+const distFns = {
+  bernoulli:   { sample: () => Math.random() < 0.3 ? 1 : 0, mu: 0.3, sigma: Math.sqrt(0.21) },
+  uniform:     { sample: () => Math.random(), mu: 0.5, sigma: Math.sqrt(1/12) },
+  exponential: { sample: () => -Math.log(1 - Math.random()), mu: 1, sigma: 1 },
+  cauchy:      { sample: () => Math.tan(Math.PI*(Math.random()-0.5)), mu: 0, sigma: 1 }
+};
+
+function sourceSamples(distKey, count) {
+  const { sample } = distFns[distKey];
+  const xs = new Array(count);
+  for (let i = 0; i < count; i++) xs[i] = sample();
+  return xs;
+}
+
+function normalPdf(x) { return Math.exp(-x*x/2) / Math.sqrt(2*Math.PI); }
+
+function runSim() {
+  const distKey = document.getElementById('dist').value;
+  const n = parseInt(document.getElementById('n').value);
+  const reps = Math.max(500, Math.min(100000, parseInt(document.getElementById('reps').value)));
+  const { sample, mu, sigma } = distFns[distKey];
+
+  document.getElementById('cauchy-note').style.display = distKey === 'cauchy' ? '' : 'none';
+
+  // Source distribution sample for left chart
+  const srcCount = Math.min(8000, reps * 2);
+  const srcSamples = sourceSamples(distKey, srcCount);
+
+  // Compute standardised means
+  const standardised = new Array(reps);
+  for (let r = 0; r < reps; r++) {
+    let s = 0;
+    for (let i = 0; i < n; i++) s += sample();
+    const mean = s / n;
+    if (distKey === 'cauchy') {
+      standardised[r] = mean;
+    } else {
+      standardised[r] = Math.sqrt(n) * (mean - mu) / sigma;
+    }
+  }
+
+  // Source histogram
+  const srcTrace = {
+    x: srcSamples, type: 'histogram', nbinsx: 40,
+    marker: { color: '#1A1A1A', line: { color: '#fff', width: 0.5 } },
+    histnorm: 'probability density', name: 'source'
+  };
+  Plotly.react('source-chart', [srcTrace], {
+    paper_bgcolor: '#fff', plot_bgcolor: '#FAFAFA',
+    margin: { l: 50, r: 20, t: 10, b: 40 },
+    xaxis: { title: 'x', gridcolor: '#EEE' },
+    yaxis: { title: 'density', gridcolor: '#EEE' },
+    font: { family: 'Inter, sans-serif', color: '#1A1A1A' },
+    showlegend: false
+  }, { responsive: true, displaylogo: false });
+
+  // Standardised mean histogram + N(0,1) overlay
+  const xRange = distKey === 'cauchy' ? [-12, 12] : [-4, 4];
+  const meanTrace = {
+    x: standardised, type: 'histogram', nbinsx: 50,
+    xbins: { start: xRange[0], end: xRange[1], size: (xRange[1] - xRange[0]) / 50 },
+    marker: { color: '#1A1A1A', line: { color: '#fff', width: 0.5 } },
+    histnorm: 'probability density', name: 'std. mean'
+  };
+  const xs = [], ys = [];
+  for (let x = -4; x <= 4.01; x += 0.05) { xs.push(x); ys.push(normalPdf(x)); }
+  const normalTrace = {
+    x: xs, y: ys, mode: 'lines', type: 'scatter',
+    line: { color: '#FF00FF', width: 2 }, name: 'N(0, 1)'
+  };
+  Plotly.react('mean-chart', [meanTrace, normalTrace], {
+    paper_bgcolor: '#fff', plot_bgcolor: '#FAFAFA',
+    margin: { l: 50, r: 20, t: 10, b: 40 },
+    xaxis: { title: 'z', gridcolor: '#EEE', range: xRange },
+    yaxis: { title: 'density', gridcolor: '#EEE' },
+    font: { family: 'Inter, sans-serif', color: '#1A1A1A' },
+    showlegend: true,
+    legend: { x: 1, y: 1, xanchor: 'right', bgcolor: 'rgba(255,255,255,0.85)' }
+  }, { responsive: true, displaylogo: false });
+}
+
+document.getElementById('run').addEventListener('click', runSim);
+document.getElementById('dist').addEventListener('change', runSim);
+document.getElementById('n').addEventListener('change', runSim);
+runSim();
+</script>
+</body>
+</html>
