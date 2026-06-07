@@ -38,7 +38,8 @@ jobs:
             name=$(basename "$dir")
             [ -f "$dir/slides.md" ] || { echo "skip $name (no slides.md)"; continue; }
             echo "=== building $name ==="
-            ( cd "$dir" && npm install --no-audit --no-fund && \
+            if [ -f "$dir/package-lock.json" ]; then INSTALL="npm ci"; else INSTALL="npm install"; fi
+            ( cd "$dir" && $INSTALL --omit=dev --no-audit --no-fund && \
               npx slidev build slides.md --base "$BASE/$name/" --out "$GITHUB_WORKSPACE/dist/$name" )
           done
 
